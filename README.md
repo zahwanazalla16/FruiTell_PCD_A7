@@ -20,12 +20,12 @@ Membuat Project Flutter:
 flutter create . --project-name fruitell_pcd_a7
 
 Install Dependencies Flutter:
-flutter pub add image
-flutter pub add camera
-flutter pub add image_picker
-flutter pub add tflite_flutter
-flutter pub add path_provider
-flutter pub get
+- flutter pub add image
+- flutter pub add camera
+- flutter pub add image_picker
+- flutter pub add tflite_flutter
+- flutter pub add path_provider
+- flutter pub get
 
 - YOLO & TensorFlow
 Setup YOLO Environment (jalankan ini di terminal):
