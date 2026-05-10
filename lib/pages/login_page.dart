@@ -18,18 +18,15 @@ class _LoginPageState extends State<LoginPage> {
   void _login() async {
     try {
       await _authService.signIn(
-        _emailController.text,
-        _passwordController.text,
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
       );
 
       if (mounted) {
-        // 1. Kasih tau user kalau login sukses
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text("Login Berhasil!")));
 
-        // 2. PINDAH KE HALAMAN KAMERA
-        // pushReplacement digunakan supaya user tidak bisa "Back" ke halaman Login lagi
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const CameraPage()),
@@ -42,12 +39,14 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  // Fungsi untuk Daftar
   void _register() async {
     try {
       await _authService.signUp(
-        _emailController.text,
-        _passwordController.text,
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
       );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Daftar Berhasil! Silakan Login.")),

@@ -68,6 +68,8 @@ flutter:
   assets:
     - assets/models/
     - assets/images/
+    - assets/models/fruitell_model_v2.tflite
+    - assets/models/labels.txt
     - assets/models/fruit_model.tflite
     - .env
 

@@ -1,0 +1,19 @@
+Apple Overripe
+Apple Ripe
+Apple Unripe
+Banana Overripe
+Banana Ripe
+Banana Unripe
+Dragon Fruit Ripe
+Dragon Fruit Unripe
+Mango Overripe
+Mango Ripe
+Mango Unripe
+Orange Overripe
+Orange Ripe
+Orange Unripe
+Papaya Overripe
+Papaya Ripe
+Papaya Unripe
+Strawberry Ripe
+Strawberry Unripe

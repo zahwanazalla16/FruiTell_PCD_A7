@@ -13,7 +13,7 @@ class InferenceService {
   Future<void> initModel() async {
     try {
       _interpreter = await Interpreter.fromAsset(
-        'assets/models/fruit_model.tflite',
+        'assets/models/fruitell_model_v2.tflite',
       );
       print(" Berhasil memuat model AI");
 
@@ -63,15 +63,25 @@ class InferenceService {
 
     // --- FIX URUTAN LABEL SESUAI ROBOFLOW ---
     final List<String> labels = [
-      "apple-overripe", // Index 0
-      "apple-ripe", // Index 1
-      "apple-unripe", // Index 2
-      "banana-overripe", // Index 3 (Ini yang tadi terdeteksi 92%)
-      "banana-ripe", // Index 4
-      "banana-unripe", // Index 5
-      "mango-overripe", // Index 6
-      "mango-ripe", // Index 7
-      "mango-unripe", // Index 8
+      "Apple Overripe",
+      "Apple Ripe",
+      "Apple Unripe",
+      "Banana Overripe",
+      "Banana Ripe",
+      "Banana Unripe",
+      "Dragon Fruit Ripe",
+      "Dragon Fruit Unripe",
+      "Mango Overripe",
+      "Mango Ripe",
+      "Mango Unripe",
+      "Orange Overripe",
+      "Orange Ripe",
+      "Orange Unripe",
+      "Papaya Overripe",
+      "Papaya Ripe",
+      "Papaya Unripe",
+      "Strawberry Ripe",
+      "Strawberry Unripe",
     ];
 
     int numClasses = labels.length; // Total 9 kelas
@@ -139,9 +149,8 @@ class InferenceService {
     try {
       final user = Supabase.instance.client.auth.currentUser;
 
-      // Jika user belum login, data tidak dikirim (mencegah error RLS)
       if (user == null) {
-        print("⚠️ User belum login, data Cloud tidak disinkron.");
+        print(" User belum login, data Cloud tidak disinkron.");
         return;
       }
 
