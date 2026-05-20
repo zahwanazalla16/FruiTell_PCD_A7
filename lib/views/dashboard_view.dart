@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
 
-import 'history_tab.dart';
-import 'home_tab.dart';
-import 'profile_page.dart';
-import 'scan_tab.dart';
+import 'history_view.dart';
+import 'home_view.dart';
+import 'profile_view.dart';
+import 'scan_view.dart';
 
-class DashboardPage extends StatefulWidget {
-  const DashboardPage({super.key});
+class DashboardView extends StatefulWidget {
+  const DashboardView({super.key});
 
   @override
-  State<DashboardPage> createState() => _DashboardPageState();
+  State<DashboardView> createState() => _DashboardViewState();
 }
 
-class _DashboardPageState extends State<DashboardPage> {
+class _DashboardViewState extends State<DashboardView> {
   int _selectedIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     final pages = [
-      HomeTab(onStartScan: () => setState(() => _selectedIndex = 1)),
-      const ScanTab(),
-      const HistoryTab(),
+      HomeView(onStartScan: () => setState(() => _selectedIndex = 1)),
+      const ScanView(),
+      const HistoryView(),
     ];
 
     return Scaffold(
@@ -31,7 +31,7 @@ class _DashboardPageState extends State<DashboardPage> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const ProfilePage()),
+                MaterialPageRoute(builder: (_) => const ProfileView()),
               );
             },
             icon: const Icon(Icons.settings),

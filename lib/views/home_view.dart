@@ -3,8 +3,8 @@ import 'package:hive/hive.dart';
 
 import '../models/history_model.dart';
 
-class HomeTab extends StatelessWidget {
-  const HomeTab({super.key, required this.onStartScan});
+class HomeView extends StatelessWidget {
+  const HomeView({super.key, required this.onStartScan});
 
   final VoidCallback onStartScan;
 

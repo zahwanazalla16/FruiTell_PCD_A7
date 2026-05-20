@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../models/detection_result.dart';
 
-class ScanResultPage extends StatelessWidget {
-  const ScanResultPage({
+class ScanResultView extends StatelessWidget {
+  const ScanResultView({
     super.key,
     required this.result,
     required this.imageFile,

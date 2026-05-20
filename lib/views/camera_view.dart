@@ -3,14 +3,14 @@ import 'package:camera/camera.dart';
 import '../services/inference_service.dart';
 import 'dart:io';
 
-class CameraPage extends StatefulWidget {
-  const CameraPage({super.key});
+class CameraView extends StatefulWidget {
+  const CameraView({super.key});
 
   @override
-  State<CameraPage> createState() => _CameraPageState();
+  State<CameraView> createState() => _CameraViewState();
 }
 
-class _CameraPageState extends State<CameraPage> {
+class _CameraViewState extends State<CameraView> {
   CameraController? _controller;
   final _inferenceService = InferenceService();
   bool _isProcessing = false;

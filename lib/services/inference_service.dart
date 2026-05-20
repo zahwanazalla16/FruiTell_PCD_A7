@@ -19,6 +19,18 @@ class InferenceService {
 
   List<String> _labels = [];
 
+  static const double _lowLightLumaThreshold = 95.0;
+  bool _contrastEnhancementEnabled = true;
+  double _contrastBoost = 1.0;
+
+  void setContrastEnhancementEnabled(bool enabled) {
+    _contrastEnhancementEnabled = enabled;
+  }
+
+  void setContrastBoost(double value) {
+    _contrastBoost = value.clamp(0.5, 2.0);
+  }
+
   Future<void> initModel() async {
     try {
       _interpreter = await Interpreter.fromAsset(
@@ -87,6 +99,147 @@ class InferenceService {
     return input;
   }
 
+  img.Image _enhanceForLowLight(img.Image source) {
+    final avgLuma = _computeAverageLuma(source);
+
+    // Reduce sensor noise first so enhancement does not amplify random speckles.
+    img.Image processed = img.gaussianBlur(source, radius: 1);
+
+    if (!_contrastEnhancementEnabled) {
+      return processed;
+    }
+
+    if (avgLuma < _lowLightLumaThreshold) {
+      processed = _equalizeLuminance(processed);
+      processed = _applyBrightnessContrast(
+        processed,
+        brightnessOffset: 18,
+        contrastFactor: 1.12 * _contrastBoost,
+      );
+      print(
+        'Preprocess: low-light mode enabled (avgLuma=${avgLuma.toStringAsFixed(1)})',
+      );
+    } else {
+      processed = _applyBrightnessContrast(
+        processed,
+        brightnessOffset: 4,
+        contrastFactor: 1.04 * _contrastBoost,
+      );
+    }
+
+    return processed;
+  }
+
+  double _computeAverageLuma(img.Image image) {
+    var total = 0.0;
+    final pixelCount = image.width * image.height;
+
+    for (int y = 0; y < image.height; y++) {
+      for (int x = 0; x < image.width; x++) {
+        final p = image.getPixel(x, y);
+        total += 0.299 * p.r + 0.587 * p.g + 0.114 * p.b;
+      }
+    }
+
+    return pixelCount == 0 ? 0.0 : total / pixelCount;
+  }
+
+  img.Image _applyBrightnessContrast(
+    img.Image image, {
+    required int brightnessOffset,
+    required double contrastFactor,
+  }) {
+    final out = img.Image.from(image);
+
+    for (int y = 0; y < out.height; y++) {
+      for (int x = 0; x < out.width; x++) {
+        final p = out.getPixel(x, y);
+
+        int remap(int value) {
+          final contrasted = ((value - 128) * contrastFactor + 128).round();
+          final withOffset = contrasted + brightnessOffset;
+          if (withOffset < 0) return 0;
+          if (withOffset > 255) return 255;
+          return withOffset;
+        }
+
+        out.setPixelRgba(
+          x,
+          y,
+          remap(p.r.toInt()),
+          remap(p.g.toInt()),
+          remap(p.b.toInt()),
+          p.a.toInt(),
+        );
+      }
+    }
+
+    return out;
+  }
+
+  img.Image _equalizeLuminance(img.Image image) {
+    final out = img.Image.from(image);
+    final histogram = List<int>.filled(256, 0);
+
+    for (int y = 0; y < out.height; y++) {
+      for (int x = 0; x < out.width; x++) {
+        final p = out.getPixel(x, y);
+        final yLuma = (0.299 * p.r + 0.587 * p.g + 0.114 * p.b).round();
+        histogram[yLuma]++;
+      }
+    }
+
+    final cdf = List<int>.filled(256, 0);
+    cdf[0] = histogram[0];
+    for (int i = 1; i < 256; i++) {
+      cdf[i] = cdf[i - 1] + histogram[i];
+    }
+
+    final total = out.width * out.height;
+    final cdfMin = cdf.firstWhere((v) => v > 0, orElse: () => 0);
+    if (total <= cdfMin) {
+      return out;
+    }
+
+    final lut = List<int>.filled(256, 0);
+    for (int i = 0; i < 256; i++) {
+      lut[i] = (((cdf[i] - cdfMin) / (total - cdfMin)) * 255)
+          .round()
+          .toInt()
+          .clamp(0, 255)
+          .toInt();
+    }
+
+    for (int y = 0; y < out.height; y++) {
+      for (int x = 0; x < out.width; x++) {
+        final p = out.getPixel(x, y);
+        final oldY = (0.299 * p.r + 0.587 * p.g + 0.114 * p.b).round();
+        final newY = lut[oldY];
+        final scale = oldY <= 0 ? 1.0 : newY / oldY;
+
+        int remap(int channel) {
+          final scaled = (channel * scale).round();
+          // Blend to keep colors stable after luminance equalization.
+          final blended = ((scaled * 0.7) + (channel * 0.3)).round();
+          if (blended < 0) return 0;
+          if (blended > 255) return 255;
+          return blended;
+        }
+
+        out.setPixelRgba(
+          x,
+          y,
+          remap(p.r.toInt()),
+          remap(p.g.toInt()),
+          remap(p.b.toInt()),
+          p.a.toInt(),
+        );
+      }
+    }
+
+    return out;
+  }
+
   Future<DominantDetection?> detectDominantFromFile(File imageFile) async {
     if (_interpreter == null) return null;
 
@@ -94,7 +247,8 @@ class InferenceService {
     img.Image? originalImage = img.decodeImage(imageData);
     if (originalImage == null) return null;
 
-    var input = _preProcessPCD(originalImage);
+    final enhancedImage = _enhanceForLowLight(originalImage);
+    var input = _preProcessPCD(enhancedImage);
 
     final outputShape = _interpreter!.getOutputTensor(0).shape;
     final outputSize = outputShape.fold<int>(1, (acc, dim) => acc * dim);
