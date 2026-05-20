@@ -36,12 +36,19 @@ class _CameraPageState extends State<CameraPage> {
 
     try {
       final image = await _controller!.takePicture();
-      // Jalankan AI (PCD & Inference)
-      await _inferenceService.runInference(File(image.path));
+      final result = await _inferenceService.detectDominantFromFile(
+        File(image.path),
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Analisis Selesai! Cek Log/Database.")),
+          SnackBar(
+            content: Text(
+              result == null
+                  ? 'Belum ada buah dominan terdeteksi.'
+                  : 'Deteksi: ${result.label} (${(result.confidence * 100).toStringAsFixed(1)}%)',
+            ),
+          ),
         );
       }
     } catch (e) {

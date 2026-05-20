@@ -21,13 +21,14 @@ class HistoryModelAdapter extends TypeAdapter<HistoryModel> {
       confidence: fields[1] as double,
       date: fields[2] as DateTime,
       imagePath: fields[3] as String?,
+      isSynced: fields[4] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, HistoryModel obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.label)
       ..writeByte(1)
@@ -35,7 +36,9 @@ class HistoryModelAdapter extends TypeAdapter<HistoryModel> {
       ..writeByte(2)
       ..write(obj.date)
       ..writeByte(3)
-      ..write(obj.imagePath);
+      ..write(obj.imagePath)
+      ..writeByte(4)
+      ..write(obj.isSynced);
   }
 
   @override

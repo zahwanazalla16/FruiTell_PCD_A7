@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import 'camera_page.dart';
+import 'dashboard_page.dart';
+import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -29,7 +30,7 @@ class _LoginPageState extends State<LoginPage> {
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const CameraPage()),
+          MaterialPageRoute(builder: (context) => const DashboardPage()),
         );
       }
     } catch (e) {
@@ -39,24 +40,11 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  // Fungsi untuk Daftar
-  void _register() async {
-    try {
-      await _authService.signUp(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Daftar Berhasil! Silakan Login.")),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
-    }
+  void _openRegisterPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const RegisterPage()),
+    );
   }
 
   @override
@@ -83,7 +71,7 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 ElevatedButton(onPressed: _login, child: const Text("Login")),
                 OutlinedButton(
-                  onPressed: _register,
+                  onPressed: _openRegisterPage,
                   child: const Text("Daftar"),
                 ),
               ],

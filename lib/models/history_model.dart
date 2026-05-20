@@ -17,10 +17,14 @@ class HistoryModel extends HiveObject {
   @HiveField(3)
   final String? imagePath; // Opsional: jika ingin simpan lokasi foto
 
+  @HiveField(4)
+  bool isSynced; // Track apakah sudah sinkron ke Supabase
+
   HistoryModel({
     required this.label,
     required this.confidence,
     required this.date,
     this.imagePath,
+    this.isSynced = false, // Default: belum sinkron
   });
 }
