@@ -44,9 +44,11 @@ class _ScanViewState extends State<ScanView> {
     }
 
     final contrast = _controller.contrastLevel.clamp(0.5, 2.0);
-    final brightness = contrast >= 1.0
-        ? (contrast - 1.0) * 18.0
-        : -((1.0 - contrast) * 14.0);
+    final brightness =
+        _controller.brightnessLevel +
+        (contrast >= 1.0
+            ? (contrast - 1.0) * 18.0
+            : -((1.0 - contrast) * 14.0));
 
     return ColorFilter.matrix(<double>[
       contrast,
@@ -206,6 +208,26 @@ class _ScanViewState extends State<ScanView> {
                   activeColor: const Color(0xFFE93E9D),
                   onChanged: _controller.contrastEnhancementEnabled
                       ? _controller.setContrastLevel
+                      : null,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Level Brightness: ${_controller.brightnessLevel.toStringAsFixed(0)}',
+                  style: TextStyle(
+                    color: _controller.contrastEnhancementEnabled
+                        ? Colors.white
+                        : Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+                Slider(
+                  min: -30.0,
+                  max: 30.0,
+                  divisions: 12,
+                  value: _controller.brightnessLevel,
+                  activeColor: const Color(0xFFE93E9D),
+                  onChanged: _controller.contrastEnhancementEnabled
+                      ? _controller.setBrightnessLevel
                       : null,
                 ),
               ],

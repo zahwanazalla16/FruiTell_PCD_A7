@@ -22,6 +22,7 @@ class InferenceService {
   static const double _lowLightLumaThreshold = 95.0;
   bool _contrastEnhancementEnabled = true;
   double _contrastBoost = 1.0;
+  double _brightnessManual = 0.0;
 
   void setContrastEnhancementEnabled(bool enabled) {
     _contrastEnhancementEnabled = enabled;
@@ -29,6 +30,10 @@ class InferenceService {
 
   void setContrastBoost(double value) {
     _contrastBoost = value.clamp(0.5, 2.0);
+  }
+
+  void setBrightnessManual(double value) {
+    _brightnessManual = value.clamp(-50.0, 50.0);
   }
 
   Future<void> initModel() async {
@@ -113,7 +118,7 @@ class InferenceService {
       processed = _equalizeLuminance(processed);
       processed = _applyBrightnessContrast(
         processed,
-        brightnessOffset: 18,
+        brightnessOffset: (18 + _brightnessManual).round(),
         contrastFactor: 1.12 * _contrastBoost,
       );
       print(
@@ -122,7 +127,7 @@ class InferenceService {
     } else {
       processed = _applyBrightnessContrast(
         processed,
-        brightnessOffset: 4,
+        brightnessOffset: (4 + _brightnessManual).round(),
         contrastFactor: 1.04 * _contrastBoost,
       );
     }
@@ -240,7 +245,10 @@ class InferenceService {
     return out;
   }
 
-  Future<DominantDetection?> detectDominantFromFile(File imageFile) async {
+  Future<DominantDetection?> detectDominantFromFile(
+    File imageFile, {
+    bool overwriteOriginal = false,
+  }) async {
     if (_interpreter == null) return null;
 
     final imageData = await imageFile.readAsBytes();
@@ -248,6 +256,12 @@ class InferenceService {
     if (originalImage == null) return null;
 
     final enhancedImage = _enhanceForLowLight(originalImage);
+
+    if (overwriteOriginal) {
+      // Simpan hasil PCD kembali ke file agar 'hasil cekrek' sesuai setting
+      await imageFile.writeAsBytes(img.encodeJpg(enhancedImage, quality: 90));
+    }
+
     var input = _preProcessPCD(enhancedImage);
 
     final outputShape = _interpreter!.getOutputTensor(0).shape;

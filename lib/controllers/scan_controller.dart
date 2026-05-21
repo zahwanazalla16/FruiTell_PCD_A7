@@ -21,6 +21,7 @@ class ScanController extends ChangeNotifier {
   bool _isFlashOn = false;
   bool _contrastEnhancementEnabled = true;
   double _contrastLevel = 1.0;
+  double _brightnessLevel = 0.0;
 
   static const int _stabilityWindow = 3;
 
@@ -34,6 +35,7 @@ class ScanController extends ChangeNotifier {
   bool get isFlashOn => _isFlashOn;
   bool get contrastEnhancementEnabled => _contrastEnhancementEnabled;
   double get contrastLevel => _contrastLevel;
+  double get brightnessLevel => _brightnessLevel;
 
   /// Initialize camera dan model
   Future<void> initialize() async {
@@ -61,6 +63,7 @@ class ScanController extends ChangeNotifier {
         _contrastEnhancementEnabled,
       );
       _inferenceService.setContrastBoost(_contrastLevel);
+      _inferenceService.setBrightnessManual(_brightnessLevel);
       notifyListeners();
 
       // Mulai deteksi real-time setiap 2 detik
@@ -145,6 +148,7 @@ class ScanController extends ChangeNotifier {
       _lastImagePath = photo.path;
       final result = await _inferenceService.detectDominantFromFile(
         File(photo.path),
+        overwriteOriginal: true,
       );
       return result;
     } catch (e) {
@@ -185,6 +189,13 @@ class ScanController extends ChangeNotifier {
     if ((_contrastLevel - normalized).abs() < 0.001) return;
     _contrastLevel = normalized;
     _inferenceService.setContrastBoost(_contrastLevel);
+    notifyListeners();
+  }
+
+  void setBrightnessLevel(double value) {
+    if ((_brightnessLevel - value).abs() < 0.001) return;
+    _brightnessLevel = value;
+    _inferenceService.setBrightnessManual(_brightnessLevel);
     notifyListeners();
   }
 
