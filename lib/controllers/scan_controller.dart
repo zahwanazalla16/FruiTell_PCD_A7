@@ -66,8 +66,8 @@ class ScanController extends ChangeNotifier {
       _inferenceService.setBrightnessManual(_brightnessLevel);
       notifyListeners();
 
-      // Mulai deteksi real-time setiap 2 detik
-      _detectTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      // Mulai deteksi real-time setiap 3 detik (diperlama dari 2s untuk hemat CPU)
+      _detectTimer = Timer.periodic(const Duration(seconds: 3), (_) {
         _runRealtimeDetection();
       });
     } catch (e) {

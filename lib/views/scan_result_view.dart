@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../models/detection_result.dart';
 
-class ScanResultView extends StatelessWidget {
+class ScanResultView extends StatefulWidget {
   const ScanResultView({
     super.key,
     required this.result,
@@ -15,6 +15,13 @@ class ScanResultView extends StatelessWidget {
   final DetectionResult result;
   final File imageFile;
   final Future<void> Function() onSave;
+
+  @override
+  State<ScanResultView> createState() => _ScanResultViewState();
+}
+
+class _ScanResultViewState extends State<ScanResultView> {
+  bool _isSaving = false;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +42,7 @@ class ScanResultView extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(16),
                     child: Image.file(
-                      imageFile,
+                      widget.imageFile,
                       height: 280,
                       width: double.infinity,
                       fit: BoxFit.cover,
@@ -52,7 +59,7 @@ class ScanResultView extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      '${result.ripeness}! ${(result.confidence * 100).toStringAsFixed(0)}%',
+                      '${widget.result.ripeness}! ${(widget.result.confidence * 100).toStringAsFixed(0)}%',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -69,7 +76,7 @@ class ScanResultView extends StatelessWidget {
                   child: _InfoCard(
                     icon: Icons.restaurant,
                     title: 'Status',
-                    value: result.ripeness,
+                    value: widget.result.ripeness,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -77,7 +84,7 @@ class ScanResultView extends StatelessWidget {
                   child: _InfoCard(
                     icon: Icons.calendar_today,
                     title: 'Best Before',
-                    value: result.bestBefore,
+                    value: widget.result.bestBefore,
                   ),
                 ),
               ],
@@ -91,7 +98,7 @@ class ScanResultView extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            ...result.tips.map(
+            ...widget.result.tips.map(
               (tip) => Container(
                 width: double.infinity,
                 margin: const EdgeInsets.only(bottom: 10),
@@ -107,21 +114,44 @@ class ScanResultView extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () async {
-                  await onSave();
-                  if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Hasil disimpan ke riwayat.')),
-                  );
-                  Navigator.pop(context);
-                },
+                onPressed: _isSaving
+                    ? null
+                    : () async {
+                        setState(() => _isSaving = true);
+                        try {
+                          await widget.onSave();
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Hasil disimpan ke riwayat.'),
+                            ),
+                          );
+                          Navigator.pop(context);
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Gagal menyimpan: $e')),
+                            );
+                            setState(() => _isSaving = false);
+                          }
+                        }
+                      },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFF2B6CB),
                   foregroundColor: const Color(0xFF7E3E5F),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                icon: const Icon(Icons.save_alt),
-                label: const Text('Simpan ke Riwayat'),
+                icon: _isSaving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFF7E3E5F),
+                        ),
+                      )
+                    : const Icon(Icons.save_alt),
+                label: Text(_isSaving ? 'Menyimpan...' : 'Simpan ke Riwayat'),
               ),
             ),
           ],

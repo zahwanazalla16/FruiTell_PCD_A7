@@ -66,9 +66,8 @@ class InferenceService {
     }
   }
 
-  List<List<List<List<double>>>> _preProcessPCD(img.Image image) {
-    const inputSize = 640;
-    final scale = math.min(inputSize / image.width, inputSize / image.height);
+  img.Image _resizeAndPad(img.Image image, int targetSize) {
+    final scale = math.min(targetSize / image.width, targetSize / image.height);
     final resizedWidth = (image.width * scale).round();
     final resizedHeight = (image.height * scale).round();
 
@@ -76,14 +75,19 @@ class InferenceService {
       image,
       width: resizedWidth,
       height: resizedHeight,
+      interpolation: img.Interpolation.linear, // Lebih cepat dari cubic
     );
 
-    final canvas = img.Image(width: inputSize, height: inputSize);
+    final canvas = img.Image(width: targetSize, height: targetSize);
     img.fill(canvas, color: img.ColorRgb8(114, 114, 114));
-    final dx = (inputSize - resizedWidth) ~/ 2;
-    final dy = (inputSize - resizedHeight) ~/ 2;
+    final dx = (targetSize - resizedWidth) ~/ 2;
+    final dy = (targetSize - resizedHeight) ~/ 2;
     img.compositeImage(canvas, resized, dstX: dx, dstY: dy);
+    return canvas;
+  }
 
+  List<List<List<List<double>>>> _imageToTensor(img.Image image) {
+    final inputSize = image.width; // Asumsi sudah square dari _resizeAndPad
     var input = List.generate(
       1,
       (_) => List.generate(
@@ -94,14 +98,20 @@ class InferenceService {
 
     for (int y = 0; y < inputSize; y++) {
       for (int x = 0; x < inputSize; x++) {
-        final pixel = canvas.getPixel(x, y);
-
+        final pixel = image.getPixel(x, y);
         input[0][y][x][0] = pixel.r / 255.0;
         input[0][y][x][1] = pixel.g / 255.0;
         input[0][y][x][2] = pixel.b / 255.0;
       }
     }
     return input;
+  }
+
+  List<List<List<List<double>>>> _preProcessPCD(img.Image image) {
+    // Fungsi ini sekarang didelegasikan ke _resizeAndPad dan _imageToTensor
+    // untuk fleksibilitas optimasi.
+    final canvas = _resizeAndPad(image, 640);
+    return _imageToTensor(canvas);
   }
 
   img.Image _enhanceForLowLight(img.Image source) {
@@ -255,14 +265,26 @@ class InferenceService {
     img.Image? originalImage = img.decodeImage(imageData);
     if (originalImage == null) return null;
 
-    final enhancedImage = _enhanceForLowLight(originalImage);
+    // OPTIMASI: Jika untuk AI (real-time), resize dulu ke ukuran kecil (640)
+    // baru lakukan pengolahan PCD. Ini jauh lebih hemat baterai.
+    img.Image processedImage;
+    if (!overwriteOriginal) {
+      processedImage = _resizeAndPad(originalImage, 640);
+      processedImage = _enhanceForLowLight(processedImage);
+    } else {
+      // Untuk foto final, tetap proses yang agak besar tapi tetap di-resize ke ukuran wajar (misal 1024)
+      // agar tidak membakar CPU.
+      processedImage = _resizeAndPad(originalImage, 1024);
+      processedImage = _enhanceForLowLight(processedImage);
 
-    if (overwriteOriginal) {
-      // Simpan hasil PCD kembali ke file agar 'hasil cekrek' sesuai setting
-      await imageFile.writeAsBytes(img.encodeJpg(enhancedImage, quality: 90));
+      // Simpan hasil PCD kembali ke file
+      await imageFile.writeAsBytes(img.encodeJpg(processedImage, quality: 85));
+
+      // Resize lagi ke 640 untuk input model AI
+      processedImage = _resizeAndPad(processedImage, 640);
     }
 
-    var input = _preProcessPCD(enhancedImage);
+    var input = _imageToTensor(processedImage);
 
     final outputShape = _interpreter!.getOutputTensor(0).shape;
     final outputSize = outputShape.fold<int>(1, (acc, dim) => acc * dim);
@@ -368,8 +390,12 @@ class InferenceService {
     bool syncCloud = false,
   }) async {
     final item = await _saveToHive(label, confidence, imagePath: imagePath);
+
     if (syncCloud && item != null) {
-      await _syncToSupabaseItem(item);
+      // Jalankan sinkronisasi awan di background agar User tidak perlu menunggu (langsung).
+      _syncToSupabaseItem(item).catchError((e) {
+        print("Background sync failed: $e");
+      });
     }
   }
 
