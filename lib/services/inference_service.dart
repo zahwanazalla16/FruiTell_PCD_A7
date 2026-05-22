@@ -258,6 +258,7 @@ class InferenceService {
   Future<DominantDetection?> detectDominantFromFile(
     File imageFile, {
     bool overwriteOriginal = false,
+    bool fastMode = false,
   }) async {
     if (_interpreter == null) return null;
 
@@ -270,7 +271,10 @@ class InferenceService {
     img.Image processedImage;
     if (!overwriteOriginal) {
       processedImage = _resizeAndPad(originalImage, 640);
-      processedImage = _enhanceForLowLight(processedImage);
+      // Skip enhancement untuk real-time detection (fastMode=true)
+      if (!fastMode) {
+        processedImage = _enhanceForLowLight(processedImage);
+      }
     } else {
       // Untuk foto final, tetap proses yang agak besar tapi tetap di-resize ke ukuran wajar (misal 1024)
       // agar tidak membakar CPU.

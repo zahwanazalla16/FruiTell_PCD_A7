@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../controllers/scan_controller.dart';
 import '../services/dummy_content_service.dart';
+import '../widgets/detection_area_overlay.dart';
 import 'scan_result_view.dart';
 
 class ScanView extends StatefulWidget {
@@ -139,6 +140,14 @@ class _ScanViewState extends State<ScanView> {
             colorFilter: _buildPreviewFilter(),
             child: CameraPreview(_controller.controller!),
           ),
+        ),
+        // Overlay dengan corner guides dan scanning line
+        const DetectionAreaOverlay(
+          widthPercent: 0.75,
+          heightPercent: 0.40,
+          borderColor: Colors.white,
+          borderWidth: 3.0,
+          cornerLineLength: 30,
         ),
         Positioned(
           left: 16,
