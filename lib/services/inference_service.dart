@@ -39,7 +39,7 @@ class InferenceService {
   Future<void> initModel() async {
     try {
       _interpreter = await Interpreter.fromAsset(
-        'assets/models/fruitell_model_v2.tflite',
+        'assets/models/Fruitell_int8.tflite',
       );
       print(" Berhasil memuat model AI");
 
@@ -47,6 +47,8 @@ class InferenceService {
       var outputShape = _interpreter!.getOutputTensor(0).shape;
       print("Struktur Input Model: $inputShape");
       print("Struktur Output Model: $outputShape");
+      print("Tipe Input Model: ${_interpreter!.getInputTensor(0).type}");
+      print("Tipe Output Model: ${_interpreter!.getOutputTensor(0).type}");
 
       try {
         final labelsData = await rootBundle.loadString(
@@ -315,47 +317,27 @@ class InferenceService {
 
     final dim1 = outputShape[1];
     final dim2 = outputShape[2];
-    final expectedChannels = 4 + numClasses;
 
-    bool channelFirst;
-    int candidateCount;
-
-    if (dim1 == expectedChannels) {
-      channelFirst = true;
-      candidateCount = dim2;
-    } else if (dim2 == expectedChannels) {
-      channelFirst = false;
-      candidateCount = dim1;
-    } else {
-      print(
-        'Inference: output channels (${outputShape[1]},${outputShape[2]}) do not match expected $expectedChannels',
-      );
-      return null;
-    }
+    // Model baru memiliki 13 channel (4 box + 9 class)
+    // Sedangkan labels.txt kita punya 19 baris.
+    // Kita paksa menggunakan struktur model [1, 13, 8400]
+    final actualChannels = dim1;
+    final candidateCount = dim2;
 
     double bestScore = 0.0;
-    double secondBestScore = 0.0;
     int bestClassIdx = -1;
 
     for (var i = 0; i < candidateCount; i++) {
-      for (var c = 0; c < numClasses; c++) {
-        final raw = channelFirst ? output[0][c + 4][i] : output[0][i][c + 4];
-        final score = (raw as num).toDouble();
+      // Channel 0-3 adalah bounding box, channel 4-12 adalah score kelas (total 9 kelas)
+      for (var c = 0; c < (actualChannels - 4); c++) {
+        final score = (output[0][c + 4][i] as num).toDouble();
 
         if (score > bestScore) {
-          secondBestScore = bestScore;
           bestScore = score;
           bestClassIdx = c;
-        } else if (score > secondBestScore) {
-          secondBestScore = score;
         }
       }
     }
-
-    final scoreGap = bestScore - secondBestScore;
-    print(
-      'Inference: bestScore=$bestScore secondBest=$secondBestScore gap=$scoreGap bestClassIdx=$bestClassIdx',
-    );
 
     if (bestClassIdx < 0) {
       print('Inference: no class detected');
@@ -369,18 +351,15 @@ class InferenceService {
       return null;
     }
 
-    if (scoreGap < minGap && minGap > 0) {
-      print('Inference: ambiguous results, gap $scoreGap < minGap $minGap');
-      return null;
-    }
+    final detectedLabel = bestClassIdx < _labels.length
+        ? _labels[bestClassIdx]
+        : 'Unknown Class ($bestClassIdx)';
 
     print(
-      'Inference: selected ${_labels[bestClassIdx]} (@${(bestScore * 100).toStringAsFixed(1)}%)',
+      'Inference: selected $detectedLabel (@${(bestScore * 100).toStringAsFixed(1)}%)',
     );
-    return DominantDetection(
-      label: _labels[bestClassIdx],
-      confidence: bestScore,
-    );
+
+    return DominantDetection(label: detectedLabel, confidence: bestScore);
   }
 
   Future<void> saveResult({
