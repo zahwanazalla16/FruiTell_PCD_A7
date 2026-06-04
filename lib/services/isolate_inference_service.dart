@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:async';
+import 'package:flutter/services.dart' show rootBundle;
 import 'inference_service.dart';
 import '../models/detection_result.dart';
 
@@ -21,11 +22,29 @@ class IsolateInferenceService {
   static final Completer<SendPort> _sendPortCompleter =
       Completer<SendPort>();
 
-  /// Inisialisasi Isolate
+  /// Inisialisasi Isolate dan muat labels
   static Future<void> initModel() async {
     if (_isolate != null) return;
 
     print('[IsolateInference] Starting initialization...');
+    
+    // Load labels in main thread (rootBundle only works on main thread)
+    List<String> labels = [];
+    try {
+      // Import rootBundle at top: import 'package:flutter/services.dart' show rootBundle;
+      final labelsData = await rootBundle.loadString(
+        'assets/models/labels.txt',
+      );
+      labels = labelsData
+          .split('\n')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+      print('[IsolateInference] Loaded ${labels.length} labels');
+    } catch (e) {
+      print('[IsolateInference] Failed to load labels: $e');
+    }
+
     final receivePort = ReceivePort();
     _isolate = await Isolate.spawn(
       _isolateEntry,
@@ -35,10 +54,16 @@ class IsolateInferenceService {
 
     _sendPort = await receivePort.first;
     _sendPortCompleter.complete(_sendPort!);
+    
+    // Send labels to Isolate as first message (before any detection messages)
+    print('[IsolateInference] Sending labels to Isolate');
+    _sendPort!.send(labels);
+    
     print('[IsolateInference] SendPort received, Isolate ready');
   }
 
   /// Entry point untuk Isolate
+  /// Receives labels as the initial message to bypass rootBundle limitation in Isolate
   static void _isolateEntry(SendPort mainSendPort) async {
     final port = ReceivePort();
     mainSendPort.send(port.sendPort);
@@ -46,6 +71,16 @@ class IsolateInferenceService {
     print('[Isolate] Entry point called');
     final inferenceService = InferenceService();
     print('[Isolate] InferenceService created');
+
+    // Tunggu labels dari main thread (first message)
+    final firstMessage = await port.first;
+    List<String> labels = [];
+    
+    if (firstMessage is List<String>) {
+      labels = firstMessage;
+      print('[Isolate] Received ${labels.length} labels from main thread');
+      inferenceService.setLabels(labels);
+    }
 
     // Inisialisasi model di Isolate thread - HARUS AWAIT
     try {

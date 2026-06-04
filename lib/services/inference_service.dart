@@ -36,6 +36,11 @@ class InferenceService {
     _brightnessManual = value.clamp(-50.0, 50.0);
   }
 
+  void setLabels(List<String> labels) {
+    _labels = labels;
+    print('[InferenceService] Labels set: ${labels.length} labels');
+  }
+
   Future<void> initModel() async {
     try {
       _interpreter = await Interpreter.fromAsset(
@@ -48,18 +53,22 @@ class InferenceService {
       print("Struktur Input Model: $inputShape");
       print("Struktur Output Model: $outputShape");
 
-      try {
-        final labelsData = await rootBundle.loadString(
-          'assets/models/labels.txt',
-        );
-        _labels = labelsData
-            .split('\n')
-            .map((s) => s.trim())
-            .where((s) => s.isNotEmpty)
-            .toList();
-        print('Loaded ${_labels.length} labels from assets/models/labels.txt');
-      } catch (e) {
-        print('Failed to load labels.txt: $e');
+      // Only try to load labels from rootBundle if not already set
+      // (in Isolate, labels are passed via setLabels instead)
+      if (_labels.isEmpty) {
+        try {
+          final labelsData = await rootBundle.loadString(
+            'assets/models/labels.txt',
+          );
+          _labels = labelsData
+              .split('\n')
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty)
+              .toList();
+          print('Loaded ${_labels.length} labels from assets/models/labels.txt');
+        } catch (e) {
+          print('Failed to load labels.txt: $e');
+        }
       }
     } catch (e) {
       print(" Gagal memuat model: $e");
