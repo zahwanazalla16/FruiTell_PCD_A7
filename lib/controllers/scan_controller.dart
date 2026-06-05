@@ -5,8 +5,11 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import '../models/detection_result.dart';
+import '../models/ripeness_analysis_input.dart';
 import '../services/dummy_content_service.dart';
 import '../services/inference_service.dart';
+import '../services/ripeness_analyzer_service.dart';
+import '../services/supabase_fruit_service.dart';
 
 class ScanController extends ChangeNotifier {
   final InferenceService _inferenceService = InferenceService();
@@ -15,6 +18,7 @@ class ScanController extends ChangeNotifier {
   Timer? _detectTimer;
   bool _isFrameBusy = false;
   bool _isModelReady = false;
+  bool _isProcessing = false;
   DetectionResult? _latestDetection;
   String? _errorMessage;
   String? _lastImagePath;
@@ -28,6 +32,7 @@ class ScanController extends ChangeNotifier {
   // Getters
   CameraController? get controller => _controller;
   bool get isInitialized => _controller?.value.isInitialized ?? false;
+  bool get isProcessing => _isProcessing;
   DetectionResult? get latestDetection => _latestDetection;
   String? get errorMessage => _errorMessage;
   bool get isModelReady => _isModelReady;
@@ -139,9 +144,27 @@ class ScanController extends ChangeNotifier {
     return DominantDetection(label: lastLabel, confidence: avgConfidence);
   }
 
+  /// Hentikan sementara deteksi real-time
+  void pauseDetection() {
+    _detectTimer?.cancel();
+    _detectTimer = null;
+  }
+
+  /// Mulai kembali deteksi real-time
+  void resumeDetection() {
+    if (_controller == null || !_controller!.value.isInitialized) return;
+    _detectTimer?.cancel();
+    _detectTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      _runRealtimeDetection();
+    });
+  }
+
   /// Confirm dan ambil foto final untuk result
-  Future<DominantDetection?> confirmAndCapture() async {
-    if (_controller == null || _latestDetection == null) return null;
+  Future<DetectionResult?> confirmAndCapture() async {
+    if (_controller == null || _latestDetection == null || _isProcessing) return null;
+
+    _isProcessing = true;
+    notifyListeners();
 
     try {
       final photo = await _controller!.takePicture();
@@ -150,12 +173,99 @@ class ScanController extends ChangeNotifier {
         File(photo.path),
         overwriteOriginal: true,
       );
-      return result;
+      if (result == null) return null;
+
+      final enriched = await enrichWithRipenessAnalysis(result);
+      return enriched;
     } catch (e) {
       _errorMessage = 'Error capture: $e';
       notifyListeners();
       return null;
+    } finally {
+      _isProcessing = false;
+      notifyListeners();
     }
+  }
+
+  /// Enrich detection result dengan AI ripeness analysis dari Supabase
+  /// Returns DetectionResult dengan ripeness metadata jika fruit ada di database
+  Future<DetectionResult> enrichWithRipenessAnalysis(
+    DominantDetection detection,
+  ) async {
+    try {
+      // Fallback ke dummy content dulu
+      var result = DummyContentService.enrich(detection.label, detection.confidence);
+
+      // Normalize fruit name dari label
+      final fruitName = _normalizeFruitName(detection.label);
+
+      // Query Supabase untuk fruit data
+      final fruitData = await SupabaseFruitService.getFruitData(fruitName);
+
+      if (fruitData.characteristics != null && fruitData.levels.isNotEmpty) {
+        // Ada data di database, lanjut analyze
+        print('[ScanController] Fruit $fruitName ditemukan di database');
+
+        // Prepare input untuk ripeness analyzer
+        final input = RipenessAnalysisInput(
+          fruitLabel: detection.label,
+          confidence: detection.confidence,
+          averageLuma: detection.averageLuma,
+          captureTime: DateTime.now(),
+        );
+
+        // Analyze ripeness
+        final ripenessResult = RipenessAnalyzerService.analyzeRipeness(
+          input: input,
+          fruitChar: fruitData.characteristics!,
+          ripenessLevels: fruitData.levels,
+        );
+
+        // Merge dengan existing result
+        result = DetectionResult(
+          label: result.label,
+          confidence: result.confidence,
+          ripeness: result.ripeness,
+          freshness: result.freshness,
+          bestBefore: result.bestBefore,
+          tips: ripenessResult.preparationTips, // Use AI tips
+          // New ripeness fields
+          ripenessLevel: ripenessResult.ripenessLevel,
+          ripenessScore: ripenessResult.ripenessScore,
+          aiConfidence: ripenessResult.aiConfidence,
+          bestEatDate: ripenessResult.bestEatDate,
+          bestEatRange: ripenessResult.bestEatRange,
+          storageMethod: ripenessResult.storageMethod,
+          fruitName: fruitName,
+        );
+
+        print(
+          '[ScanController] Ripeness enriched: ${ripenessResult.levelIndonesian} '
+          '(${ripenessResult.ripenessScore}% confidence: ${(ripenessResult.aiConfidence * 100).toStringAsFixed(0)}%)',
+        );
+      } else {
+        print('[ScanController] Fruit $fruitName tidak ada di database, gunakan dummy data');
+      }
+
+      return result;
+    } catch (e) {
+      print('[ScanController] Error enrichWithRipenessAnalysis: $e');
+      // Fallback ke dummy content
+      return DummyContentService.enrich(detection.label, detection.confidence);
+    }
+  }
+
+  /// Normalize fruit name dari label
+  static String _normalizeFruitName(String label) {
+    final normalized = label.toLowerCase();
+    if (normalized.contains('apple')) return 'apple';
+    if (normalized.contains('banana')) return 'banana';
+    if (normalized.contains('mango')) return 'mango';
+    if (normalized.contains('orange')) return 'orange';
+    if (normalized.contains('papaya')) return 'papaya';
+    if (normalized.contains('strawberry')) return 'strawberry';
+    if (normalized.contains('dragon')) return 'dragon_fruit';
+    return normalized;
   }
 
   /// Simpan hasil ke Hive dan Supabase

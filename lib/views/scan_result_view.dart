@@ -31,6 +31,7 @@ class _ScanResultViewState extends State<ScanResultView> {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         child: Column(
           children: [
+            // Image dengan status
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
@@ -70,6 +71,92 @@ class _ScanResultViewState extends State<ScanResultView> {
               ),
             ),
             const SizedBox(height: 16),
+
+            // AI Ripeness Info (jika tersedia)
+            if (widget.result.hasRipenessData) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3F8),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: const Color(0xFFE93E9D),
+                    width: 2,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          widget.result.ripenessLevel ?? 'Unknown',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${widget.result.ripenessScore ?? 0}%',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFFE93E9D),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Best Eat Date Section
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            '📅 Best Eat Date',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF666666),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            widget.result.bestEatRange ?? 'Tidak diketahui',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFFE93E9D),
+                            ),
+                          ),
+                          if (widget.result.storageMethod != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              '💾 ${widget.result.storageMethod!}',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF666666),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Status & Best Before (fallback info)
             Row(
               children: [
                 Expanded(
@@ -90,27 +177,57 @@ class _ScanResultViewState extends State<ScanResultView> {
               ],
             ),
             const SizedBox(height: 16),
+
+            // Prep Tips Section
             const Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Storage Tips',
+                '👨‍🍳 Prep Tips',
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
               ),
             ),
             const SizedBox(height: 10),
-            ...widget.result.tips.map(
-              (tip) => Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
+            if (widget.result.tips.isNotEmpty)
+              ...widget.result.tips.map(
+                (tip) => Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: const Color(0xFFEEEEEE),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '•',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFE93E9D),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          tip,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Text(tip, style: const TextStyle(fontSize: 16)),
-              ),
-            ),
+              )
+            else
+              const Text('Tidak ada tips tersedia'),
             const SizedBox(height: 12),
+
+            // Save Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(

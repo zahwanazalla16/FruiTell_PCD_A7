@@ -4,7 +4,6 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import '../controllers/scan_controller.dart';
-import '../services/dummy_content_service.dart';
 import 'scan_result_view.dart';
 
 class ScanView extends StatefulWidget {
@@ -89,16 +88,18 @@ class _ScanViewState extends State<ScanView> {
   }
 
   Future<void> _confirmAndOpenResult() async {
-    final result = await _controller.confirmAndCapture();
-    if (!mounted || result == null) return;
-
-    final enriched = DummyContentService.enrich(
-      result.label,
-      result.confidence,
-    );
+    _controller.pauseDetection();
+    final enriched = await _controller.confirmAndCapture();
+    if (!mounted || enriched == null) {
+      _controller.resumeDetection();
+      return;
+    }
 
     final imagePath = _controller.lastImagePath;
-    if (imagePath == null) return;
+    if (imagePath == null) {
+      _controller.resumeDetection();
+      return;
+    }
 
     if (!mounted) return;
     await Navigator.push(
@@ -117,6 +118,10 @@ class _ScanViewState extends State<ScanView> {
         ),
       ),
     );
+
+    if (mounted) {
+      _controller.resumeDetection();
+    }
   }
 
   @override
@@ -285,7 +290,7 @@ class _ScanViewState extends State<ScanView> {
           right: 16,
           bottom: 24,
           child: ElevatedButton.icon(
-            onPressed: _controller.latestDetection == null
+            onPressed: (_controller.latestDetection == null || _controller.isProcessing)
                 ? null
                 : _confirmAndOpenResult,
             style: ElevatedButton.styleFrom(
@@ -293,8 +298,19 @@ class _ScanViewState extends State<ScanView> {
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
-            icon: const Icon(Icons.check_circle_outline),
-            label: const Text('Konfirmasi & Lihat Hasil'),
+            icon: _controller.isProcessing
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Icon(Icons.check_circle_outline),
+            label: Text(_controller.isProcessing
+                ? 'Memproses...'
+                : 'Konfirmasi & Lihat Hasil'),
           ),
         ),
       ],
