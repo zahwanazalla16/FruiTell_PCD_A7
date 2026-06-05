@@ -22,6 +22,60 @@ class HistoryController extends ChangeNotifier {
     }
   }
 
+  /// Ambil history dengan filter opsional: buah dan maturity (level)
+  List<HistoryModel> getHistoryFiltered({String? fruit, String? maturity}) {
+    final all = getHistory();
+    return all.where((item) {
+      if (fruit != null && _fruitFromLabel(item.label) != fruit.toLowerCase()) {
+        return false;
+      }
+      if (maturity != null &&
+          (item.maturity ?? '').toLowerCase() != maturity.toLowerCase())
+        return false;
+      return true;
+    }).toList();
+  }
+
+  /// Helper: daftar buah unik yang ada di history
+  List<String> getAvailableFruits() {
+    final fruits = getHistory()
+        .map((item) => _fruitFromLabel(item.label))
+        .toSet()
+        .toList();
+    fruits.sort();
+    return fruits;
+  }
+
+  /// Insights berdasarkan filter buah dan kematangan
+  Map<String, dynamic> insightsForFilters({String? fruit, String? maturity}) {
+    final items = getHistoryFiltered(fruit: fruit, maturity: maturity);
+    final total = items.length;
+    final Map<String, int> byFruit = {};
+    final Map<String, int> byMaturity = {};
+
+    for (final it in items) {
+      final fruitKey = _fruitFromLabel(it.label);
+      byFruit[fruitKey] = (byFruit[fruitKey] ?? 0) + 1;
+
+      final mat = (it.maturity ?? 'unknown').toLowerCase();
+      byMaturity[mat] = (byMaturity[mat] ?? 0) + 1;
+    }
+
+    return {'total': total, 'byFruit': byFruit, 'byMaturity': byMaturity};
+  }
+
+  String _fruitFromLabel(String label) {
+    final normalized = label.toLowerCase();
+    if (normalized.contains('apple')) return 'apple';
+    if (normalized.contains('banana')) return 'banana';
+    if (normalized.contains('mango')) return 'mango';
+    if (normalized.contains('orange')) return 'orange';
+    if (normalized.contains('papaya')) return 'papaya';
+    if (normalized.contains('strawberry')) return 'strawberry';
+    if (normalized.contains('dragon')) return 'dragon fruit';
+    return 'unknown';
+  }
+
   /// Hitung item yang pending sync
   int getPendingCount() {
     final history = getHistory();

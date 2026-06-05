@@ -12,6 +12,8 @@ class HistoryView extends StatefulWidget {
 
 class _HistoryViewState extends State<HistoryView> {
   late final HistoryController _controller;
+  String? _selectedFruit;
+  String? _selectedMaturity;
 
   @override
   void initState() {
@@ -42,6 +44,18 @@ class _HistoryViewState extends State<HistoryView> {
     final history = _controller.getHistory();
     final pendingCount = _controller.getPendingCount();
 
+    final fruits = _controller.getAvailableFruits();
+    final maturities = history
+        .map((e) => (e.maturity ?? 'unknown'))
+        .toSet()
+        .toList();
+    final displayed = history.isEmpty
+        ? <HistoryModel>[]
+        : _controller.getHistoryFiltered(
+            fruit: _selectedFruit,
+            maturity: _selectedMaturity,
+          );
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 100),
       children: [
@@ -55,6 +69,134 @@ class _HistoryViewState extends State<HistoryView> {
           style: TextStyle(fontSize: 18),
         ),
         const SizedBox(height: 18),
+        // Filters row
+        if (history.isNotEmpty)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  // Fruit
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedFruit,
+                      decoration: const InputDecoration(labelText: 'Buah'),
+                      items: [null, ...fruits]
+                          .map(
+                            (fruit) => DropdownMenuItem(
+                              value: fruit,
+                              child: Text(
+                                fruit == null
+                                    ? 'Semua'
+                                    : fruit[0].toUpperCase() +
+                                          fruit.substring(1),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) => setState(() => _selectedFruit = v),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Maturity
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedMaturity,
+                      decoration: const InputDecoration(
+                        labelText: 'Kematangan',
+                      ),
+                      items: [null, ...maturities]
+                          .map(
+                            (m) => DropdownMenuItem(
+                              value: m,
+                              child: Text(m ?? 'Semua'),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) => setState(() => _selectedMaturity = v),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Insights panel for selected filters
+              Builder(
+                builder: (ctx) {
+                  final insights = _controller.insightsForFilters(
+                    fruit: _selectedFruit,
+                    maturity: _selectedMaturity,
+                  );
+                  final total = insights['total'] as int? ?? 0;
+                  final byFruit =
+                      insights['byFruit'] as Map<String, int>? ?? {};
+                  final byMaturity =
+                      insights['byMaturity'] as Map<String, int>? ?? {};
+
+                  return Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE3F2FD),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Insights — Buah & Kematangan',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text('Total: $total buah'),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: byFruit.entries.map((e) {
+                                  return Chip(
+                                    label: Text('${e.key}: ${e.value}'),
+                                  );
+                                }).toList(),
+                              ),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: byMaturity.entries.map((e) {
+                                  return Chip(
+                                    label: Text('${e.key}: ${e.value}'),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            // reset filters
+                            setState(() {
+                              _selectedFruit = null;
+                              _selectedMaturity = null;
+                            });
+                          },
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Reset'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF42A5F5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 18),
+            ],
+          ),
         // Show sync status and retry button
         if (pendingCount > 0)
           Container(
@@ -129,13 +271,13 @@ class _HistoryViewState extends State<HistoryView> {
             ),
           ),
         const SizedBox(height: 18),
-        if (history.isEmpty)
+        if (displayed.isEmpty)
           const Padding(
             padding: EdgeInsets.only(top: 24),
             child: Text('Belum ada data. Mulai scan di tab Scan.'),
           )
         else
-          ..._buildHistoryItems(history),
+          ..._buildHistoryItems(displayed),
       ],
     );
   }
