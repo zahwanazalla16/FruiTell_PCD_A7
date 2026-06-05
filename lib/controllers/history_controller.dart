@@ -36,17 +36,18 @@ class HistoryController extends ChangeNotifier {
     }).toList();
   }
 
-  /// Helper: daftar buah unik yang ada di history
+  /// Helper: daftar buah unik yang ada di history (exclude unknown dan dragon fruit)
   List<String> getAvailableFruits() {
     final fruits = getHistory()
         .map((item) => _fruitFromLabel(item.label))
         .toSet()
+        .where((f) => f != 'unknown' && f != 'dragon fruit')
         .toList();
     fruits.sort();
     return fruits;
   }
 
-  /// Insights berdasarkan filter buah dan kematangan
+  /// Insights berdasarkan filter buah dan kematangan (exclude invalid categories)
   Map<String, dynamic> insightsForFilters({String? fruit, String? maturity}) {
     final items = getHistoryFiltered(fruit: fruit, maturity: maturity);
     final total = items.length;
@@ -55,10 +56,16 @@ class HistoryController extends ChangeNotifier {
 
     for (final it in items) {
       final fruitKey = _fruitFromLabel(it.label);
-      byFruit[fruitKey] = (byFruit[fruitKey] ?? 0) + 1;
+      // Only include valid fruits
+      if (fruitKey != 'unknown' && fruitKey != 'dragon fruit') {
+        byFruit[fruitKey] = (byFruit[fruitKey] ?? 0) + 1;
+      }
 
-      final mat = (it.maturity ?? 'unknown').toLowerCase();
-      byMaturity[mat] = (byMaturity[mat] ?? 0) + 1;
+      // Only include valid maturity levels
+      final mat = (it.maturity ?? '').toLowerCase().trim();
+      if (mat.isNotEmpty && mat != 'unknown') {
+        byMaturity[mat] = (byMaturity[mat] ?? 0) + 1;
+      }
     }
 
     return {'total': total, 'byFruit': byFruit, 'byMaturity': byMaturity};
