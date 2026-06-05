@@ -89,8 +89,13 @@ class _ScanViewState extends State<ScanView> {
   }
 
   Future<void> _confirmAndOpenResult() async {
+    _controller.pauseDetection(); // Jeda deteksi real-time agar tidak membebani CPU
+
     final result = await _controller.confirmAndCapture();
-    if (!mounted || result == null) return;
+    if (!mounted || result == null) {
+      _controller.resumeDetection();
+      return;
+    }
 
     final enriched = DummyContentService.enrich(
       result.label,
@@ -98,7 +103,10 @@ class _ScanViewState extends State<ScanView> {
     );
 
     final imagePath = _controller.lastImagePath;
-    if (imagePath == null) return;
+    if (imagePath == null) {
+      _controller.resumeDetection();
+      return;
+    }
 
     if (!mounted) return;
     await Navigator.push(
@@ -117,6 +125,11 @@ class _ScanViewState extends State<ScanView> {
         ),
       ),
     );
+
+    // Lanjutkan kembali deteksi real-time setelah kembali dari halaman hasil
+    if (mounted) {
+      _controller.resumeDetection();
+    }
   }
 
   @override
