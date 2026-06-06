@@ -24,13 +24,24 @@ class _HistoryViewState extends State<HistoryView> {
   }
 
   void _onControllerUpdate() {
-    if (mounted) {
-      setState(() {});
-    }
+    if (mounted) setState(() {});
   }
 
   Future<void> _retrySync() async {
     await _controller.retrySyncPending();
+  }
+
+  String _maturityLabel(String maturity) {
+    switch (maturity) {
+      case 'ripe':
+        return 'Matang';
+      case 'unripe':
+        return 'Mentah';
+      case 'overripe':
+        return 'Busuk';
+      default:
+        return maturity;
+    }
   }
 
   @override
@@ -46,10 +57,7 @@ class _HistoryViewState extends State<HistoryView> {
     final pendingCount = _controller.getPendingCount();
 
     final fruits = _controller.getAvailableFruits();
-    final maturities = history
-        .map((e) => (e.maturity ?? 'unknown'))
-        .toSet()
-        .toList();
+    final maturities = _controller.getAvailableMaturities();
     final displayed = history.isEmpty
         ? <HistoryModel>[]
         : _controller.getHistoryFiltered(
@@ -60,17 +68,42 @@ class _HistoryViewState extends State<HistoryView> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 100),
       children: [
-        const Text(
-          'Scan History',
-          style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Track your fresh finds and nutritional insights.',
-          style: TextStyle(fontSize: 18),
+        // ── Page Header ──────────────────────────────────────────────
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                colors: [Color(0xFFE93E9D), Color(0xFFB5006A)],
+              ).createShader(bounds),
+              child: const Text(
+                'Scan History',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+            const Text(
+              'Riwayat deteksi buahmu',
+              style: TextStyle(
+                fontSize: 13,
+                color: Color(0xFF9E7A8A),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 24),
-        // Filters row
+
+        // ── Snapshot Terkini (data global, tidak terfilter) ──────────
+        if (history.isNotEmpty)
+          _SnapshotCard(snapshotData: _controller.getSnapshotData()),
+        if (history.isNotEmpty) const SizedBox(height: 20),
+
+        // ── Filter row ───────────────────────────────────────────────
         if (history.isNotEmpty)
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -82,7 +115,6 @@ class _HistoryViewState extends State<HistoryView> {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  // Fruit Dropdown
                   Expanded(
                     child: FruiTellDropdown(
                       label: 'Pilih Buah',
@@ -96,7 +128,6 @@ class _HistoryViewState extends State<HistoryView> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  // Maturity Dropdown
                   Expanded(
                     child: FruiTellDropdown(
                       label: 'Kematangan',
@@ -105,159 +136,28 @@ class _HistoryViewState extends State<HistoryView> {
                       items: [null, ...maturities],
                       itemLabel: (m) => m == null
                           ? 'Semua Level'
-                          : m[0].toUpperCase() + m.substring(1),
+                          : _maturityLabel(m),
                       onChanged: (v) => setState(() => _selectedMaturity = v),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 14),
-              // Insights panel for selected filters
-              Builder(
-                builder: (ctx) {
-                  final insights = _controller.insightsForFilters(
-                    fruit: _selectedFruit,
-                    maturity: _selectedMaturity,
-                  );
-                  final total = insights['total'] as int? ?? 0;
-                  final byFruit =
-                      insights['byFruit'] as Map<String, int>? ?? {};
-                  final byMaturity =
-                      insights['byMaturity'] as Map<String, int>? ?? {};
-
-                  // Only show insights if there's data
-                  if (total == 0) return const SizedBox.shrink();
-
-                  return Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.blue[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.blue[200] ?? Colors.blue,
-                        width: 1,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Summary',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
-                                color: Colors.blue[900],
-                              ),
-                            ),
-                            ElevatedButton.icon(
-                              onPressed: () {
-                                setState(() {
-                                  _selectedFruit = null;
-                                  _selectedMaturity = null;
-                                });
-                              },
-                              icon: const Icon(Icons.refresh, size: 16),
-                              label: const Text('Reset'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue[400],
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'Total Hasil: $total buah',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                        if (byFruit.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            'Per Buah',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                              color: Colors.blue[800],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: byFruit.entries.map((e) {
-                              return Chip(
-                                label: Text(
-                                  '${e.key}: ${e.value}',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                backgroundColor: Colors.blue[100],
-                                side: BorderSide(
-                                  color: Colors.blue[300] ?? Colors.blue,
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                        if (byMaturity.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            'Per Tingkat Kematangan',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                              color: Colors.blue[800],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: byMaturity.entries.map((e) {
-                              return Chip(
-                                label: Text(
-                                  '${e.key}: ${e.value}',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                backgroundColor: Colors.orange[100],
-                                side: BorderSide(
-                                  color: Colors.orange[300] ?? Colors.orange,
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ],
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 18),
             ],
           ),
-        // Show sync status and retry button
+
+        // ── Distribusi & Kematangan (mengikuti filter aktif) ─────────
+        if (history.isNotEmpty) ...[
+          _FilteredInsightPanel(
+            insights: _controller.insightsForFilters(
+              fruit: _selectedFruit,
+              maturity: _selectedMaturity,
+            ),
+          ),
+          const SizedBox(height: 18),
+        ],
+
+        // ── Sync status ──────────────────────────────────────────────
         if (pendingCount > 0)
           Container(
             padding: const EdgeInsets.all(14),
@@ -349,6 +249,8 @@ class _HistoryViewState extends State<HistoryView> {
             ),
           ),
         const SizedBox(height: 20),
+
+        // ── History list ─────────────────────────────────────────────
         if (displayed.isEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 24),
@@ -432,11 +334,8 @@ class _HistoryViewState extends State<HistoryView> {
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                Icons.cloud_off,
-                                size: 12,
-                                color: Color(0xFFF57F17),
-                              ),
+                              Icon(Icons.cloud_off,
+                                  size: 12, color: Color(0xFFF57F17)),
                               SizedBox(width: 4),
                               Text(
                                 'Pending',
@@ -462,11 +361,8 @@ class _HistoryViewState extends State<HistoryView> {
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                Icons.cloud_done,
-                                size: 12,
-                                color: Color(0xFF388E3C),
-                              ),
+                              Icon(Icons.cloud_done,
+                                  size: 12, color: Color(0xFF388E3C)),
                               SizedBox(width: 4),
                               Text(
                                 'Synced',
@@ -523,9 +419,463 @@ class _HistoryViewState extends State<HistoryView> {
   }
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+// SNAPSHOT CARD — Ringkasan global (tidak terfilter)
+// ═════════════════════════════════════════════════════════════════════════════
+
+class _SnapshotCard extends StatelessWidget {
+  const _SnapshotCard({required this.snapshotData});
+
+  final Map<String, dynamic> snapshotData;
+
+  static const _pink = Color(0xFFE93E9D);
+
+  @override
+  Widget build(BuildContext context) {
+    final matang   = snapshotData['matang']  as int? ?? 0;
+    final mentah   = snapshotData['mentah']  as int? ?? 0;
+    final busuk    = snapshotData['busuk']   as int? ?? 0;
+    final headline = snapshotData['headline'] as String? ?? '';
+
+    final isCritical = busuk > 0;
+    final headerColors = isCritical
+        ? [const Color(0xFFE53935), const Color(0xFFEF5350)]
+        : [const Color(0xFFE93E9D), const Color(0xFFFF6DBB)];
+    final headerIcon = isCritical
+        ? Icons.warning_amber_rounded
+        : matang > 0
+            ? Icons.check_circle_rounded
+            : Icons.hourglass_top_rounded;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: headerColors,
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: headerColors.first.withOpacity(0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Label
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(
+                    Icons.auto_awesome_rounded,
+                    size: 12,
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Snapshot Terkini',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white.withOpacity(0.85),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Headline
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(headerIcon, color: Colors.white, size: 20),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    headline,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // Stat chips
+            Row(
+              children: [
+                _SnapshotChip(label: 'Matang', count: matang,
+                    dotColor: const Color(0xFF69F0AE)),
+                const SizedBox(width: 8),
+                _SnapshotChip(label: 'Mentah', count: mentah,
+                    dotColor: const Color(0xFFFFD740)),
+                const SizedBox(width: 8),
+                _SnapshotChip(label: 'Busuk', count: busuk,
+                    dotColor: const Color(0xFFFF6E6E)),
+              ],
+            ),
+
+            // Alert busuk
+            if (busuk > 0) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.35), width: 1),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded,
+                        color: Colors.white, size: 15),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '$busuk buah terdeteksi busuk — segera buang agar tidak menular ke buah lain.',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// FILTERED INSIGHT PANEL — Distribusi & Kematangan (mengikuti filter)
+// ═════════════════════════════════════════════════════════════════════════════
+
+class _FilteredInsightPanel extends StatelessWidget {
+  const _FilteredInsightPanel({required this.insights});
+
+  final Map<String, dynamic> insights;
+
+  static const _pink = Color(0xFFE93E9D);
+
+  static const _fruitMeta = {
+    'apple':        {'color': Color(0xFFE53935)},
+    'banana':       {'color': Color(0xFFFDD835)},
+    'mango':        {'color': Color(0xFFFB8C00)},
+    'orange':       {'color': Color(0xFFFF7043)},
+    'papaya':       {'color': Color(0xFF43A047)},
+    'strawberry':   {'color': Color(0xFFE91E63)},
+    'dragon fruit': {'color': Color(0xFFAB47BC)},
+  };
+
+  static Color _maturityColor(String m) {
+    switch (m.toLowerCase()) {
+      case 'unripe':   return const Color(0xFF43A047);
+      case 'ripe':     return const Color(0xFFFFB300);
+      case 'overripe': return const Color(0xFFE53935);
+      default:         return const Color(0xFF9E9E9E);
+    }
+  }
+
+  static String _maturityLabel(String m) {
+    switch (m.toLowerCase()) {
+      case 'unripe':   return 'Mentah';
+      case 'ripe':     return 'Matang';
+      case 'overripe': return 'Busuk';
+      default:         return m[0].toUpperCase() + m.substring(1);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final total      = insights['total']     as int? ?? 0;
+    final byFruit    = insights['byFruit']   as Map<String, int>? ?? {};
+    final byMaturity = insights['byMaturity'] as Map<String, int>? ?? {};
+
+    if (total == 0) return const SizedBox.shrink();
+
+    final sortedFruits = byFruit.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final sortedMaturities = byMaturity.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final maxFruit = sortedFruits.isEmpty ? 1 : sortedFruits.first.value;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: _pink.withOpacity(0.10),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Distribusi Buah
+            _SectionTitle(icon: Icons.bar_chart_rounded, label: 'Distribusi Buah'),
+            const SizedBox(height: 12),
+            ...sortedFruits.map((e) {
+              final meta  = _fruitMeta[e.key];
+              final color = (meta?['color'] as Color?) ?? _pink;
+              final pct   = e.value / maxFruit;
+              final name  = e.key[0].toUpperCase() + e.key.substring(1);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(name,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF3D1A2B),
+                              )),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: color.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text('${e.value}x',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: color,
+                              )),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: pct,
+                        minHeight: 7,
+                        backgroundColor: color.withOpacity(0.12),
+                        valueColor: AlwaysStoppedAnimation<Color>(color),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+
+            // Divider
+            if (sortedFruits.isNotEmpty && sortedMaturities.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Divider(color: _pink.withOpacity(0.1), thickness: 1),
+              ),
+
+            // Tingkat Kematangan
+            if (sortedMaturities.isNotEmpty) ...[
+              _SectionTitle(
+                  icon: Icons.thermostat_rounded, label: 'Tingkat Kematangan'),
+              const SizedBox(height: 12),
+              Row(
+                children: sortedMaturities.map((e) {
+                  final color        = _maturityColor(e.key);
+                  final label        = _maturityLabel(e.key);
+                  final pctOfTotal   = total > 0
+                      ? (e.value / total * 100).round()
+                      : 0;
+                  final isLast = e.key == sortedMaturities.last.key;
+                  return Expanded(
+                    child: Container(
+                      margin: EdgeInsets.only(right: isLast ? 0 : 8),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12, horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                            color: color.withOpacity(0.3), width: 1.5),
+                      ),
+                      child: Column(
+                        children: [
+                          Text('$pctOfTotal%',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: color,
+                              )),
+                          const SizedBox(height: 2),
+                          Text(label,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: color.withOpacity(0.8),
+                              )),
+                          Text('${e.value} buah',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: color.withOpacity(0.6),
+                              )),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+
 // ─────────────────────────────────────────────────────────────────────────────
-// Custom FruiTell Dropdown
+// Snapshot chip (di dalam header gradient)
 // ─────────────────────────────────────────────────────────────────────────────
+
+class _SnapshotChip extends StatelessWidget {
+  const _SnapshotChip({
+    required this.label,
+    required this.count,
+    required this.dotColor,
+  });
+
+  final String label;
+  final int count;
+  final Color dotColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.18),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: dotColor,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '$count',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Section title helper
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(5),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF7E1EA),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 14, color: const Color(0xFFE93E9D)),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF3D1A2B),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Custom FruiTell Dropdown (tidak berubah)
+// ═════════════════════════════════════════════════════════════════════════════
 
 class FruiTellDropdown extends StatefulWidget {
   const FruiTellDropdown({
@@ -719,7 +1069,9 @@ class _FruiTellDropdownState extends State<FruiTellDropdown>
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: isActive ? Colors.white : const Color(0xFF3D1A2B),
+                        color: isActive
+                            ? Colors.white
+                            : const Color(0xFF3D1A2B),
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -743,7 +1095,7 @@ class _FruiTellDropdownState extends State<FruiTellDropdown>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Dropdown Panel (overlay)
+// Dropdown Panel (overlay) — tidak berubah
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _DropdownPanel extends StatelessWidget {
@@ -816,7 +1168,10 @@ class _DropdownPanel extends StatelessWidget {
                 highlightColor: _pinkLight.withOpacity(0.5),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
-                  margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
                     vertical: 11,
@@ -834,7 +1189,6 @@ class _DropdownPanel extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      // Indicator dot
                       AnimatedContainer(
                         duration: const Duration(milliseconds: 150),
                         width: 7,
