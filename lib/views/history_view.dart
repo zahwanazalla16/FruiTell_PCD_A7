@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'dart:ui';
 
@@ -134,9 +136,8 @@ class _HistoryViewState extends State<HistoryView> {
                       icon: Icons.thermostat_rounded,
                       value: _selectedMaturity,
                       items: [null, ...maturities],
-                      itemLabel: (m) => m == null
-                          ? 'Semua Level'
-                          : _maturityLabel(m),
+                      itemLabel: (m) =>
+                          m == null ? 'Semua Level' : _maturityLabel(m),
                       onChanged: (v) => setState(() => _selectedMaturity = v),
                     ),
                   ),
@@ -285,127 +286,149 @@ class _HistoryViewState extends State<HistoryView> {
   List<Widget> _buildHistoryItems(List<HistoryModel> history) {
     return history.map((item) {
       return Container(
-        margin: const EdgeInsets.only(bottom: 14),
-        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: const Color(0xFFF7E1EA),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(
-                Icons.local_grocery_store,
-                color: Color(0xFFE93E9D),
-              ),
-            ),
+            _buildHistoryThumbnail(item),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: Text(
                           item.label,
                           style: const TextStyle(
-                            fontSize: 18,
+                            fontSize: 15,
                             fontWeight: FontWeight.w700,
+                            color: Color(0xFF3D1A2B),
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (!item.isSynced)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFEB3B),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.cloud_off,
-                                  size: 12, color: Color(0xFFF57F17)),
-                              SizedBox(width: 4),
-                              Text(
-                                'Pending',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFFF57F17),
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      else
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFC8E6C9),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.cloud_done,
-                                  size: 12, color: Color(0xFF388E3C)),
-                              SizedBox(width: 4),
-                              Text(
-                                'Synced',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF388E3C),
-                                ),
-                              ),
-                            ],
-                          ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _formatDate(item.date),
+                        style: const TextStyle(
+                          color: Color(0xFF876F7A),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
                         ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5B7D4),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Text(
-                      '${(item.confidence * 100).toStringAsFixed(0)}% Confidence',
-                    ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      _buildConfidencePill(item.confidence),
+                      _buildSyncPill(item.isSynced),
+                    ],
                   ),
                 ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              _formatDate(item.date),
-              style: const TextStyle(
-                color: Color(0xFF876F7A),
-                fontWeight: FontWeight.w600,
               ),
             ),
           ],
         ),
       );
     }).toList();
+  }
+
+  Widget _buildHistoryThumbnail(HistoryModel item) {
+    final imagePath = item.imagePath;
+    final imageFile = imagePath != null && imagePath.isNotEmpty
+        ? File(imagePath)
+        : null;
+    final hasImage = imageFile?.existsSync() ?? false;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 64,
+        height: 64,
+        color: Colors.white,
+        child: hasImage
+            ? Image.file(
+                imageFile!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _buildThumbnailFallback(),
+              )
+            : _buildThumbnailFallback(),
+      ),
+    );
+  }
+
+  Widget _buildThumbnailFallback() {
+    return const Center(
+      child: Icon(
+        Icons.image_not_supported_outlined,
+        color: Color(0xFFE93E9D),
+        size: 26,
+      ),
+    );
+  }
+
+  Widget _buildConfidencePill(double confidence) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5B7D4),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        '${(confidence * 100).toStringAsFixed(0)}% Confidence',
+        style: const TextStyle(
+          color: Color(0xFF7E3E5F),
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSyncPill(bool isSynced) {
+    final bgColor = isSynced
+        ? const Color(0xFFC8E6C9)
+        : const Color(0xFFFFF3C4);
+    final fgColor = isSynced
+        ? const Color(0xFF388E3C)
+        : const Color(0xFFF57F17);
+    final icon = isSynced ? Icons.cloud_done : Icons.cloud_off;
+    final label = isSynced ? 'Synced' : 'Pending';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: fgColor),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: fgColor,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   String _formatDate(DateTime date) {
@@ -432,9 +455,9 @@ class _SnapshotCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final matang   = snapshotData['matang']  as int? ?? 0;
-    final mentah   = snapshotData['mentah']  as int? ?? 0;
-    final busuk    = snapshotData['busuk']   as int? ?? 0;
+    final matang = snapshotData['matang'] as int? ?? 0;
+    final mentah = snapshotData['mentah'] as int? ?? 0;
+    final busuk = snapshotData['busuk'] as int? ?? 0;
     final headline = snapshotData['headline'] as String? ?? '';
     final latestMaturity = snapshotData['latestMaturity'] as String? ?? '';
 
@@ -532,17 +555,25 @@ class _SnapshotCard extends StatelessWidget {
             // Stat chips
             Row(
               children: [
-                _SnapshotChip(label: 'Mentah', count: mentah,
-                    dotColor: const Color(0xFFFFD740)),
+                _SnapshotChip(
+                  label: 'Mentah',
+                  count: mentah,
+                  dotColor: const Color(0xFFFFD740),
+                ),
                 const SizedBox(width: 8),
-                _SnapshotChip(label: 'Matang', count: matang,
-                    dotColor: const Color(0xFF69F0AE)),
+                _SnapshotChip(
+                  label: 'Matang',
+                  count: matang,
+                  dotColor: const Color(0xFF69F0AE),
+                ),
                 const SizedBox(width: 8),
-                _SnapshotChip(label: 'Busuk', count: busuk,
-                    dotColor: const Color(0xFFFF6E6E)),
+                _SnapshotChip(
+                  label: 'Busuk',
+                  count: busuk,
+                  dotColor: const Color(0xFFFF6E6E),
+                ),
               ],
             ),
-
           ],
         ),
       ),
@@ -562,37 +593,45 @@ class _FilteredInsightPanel extends StatelessWidget {
   static const _pink = Color(0xFFE93E9D);
 
   static const _fruitMeta = {
-    'apple':        {'color': Color(0xFFE53935)},
-    'banana':       {'color': Color(0xFFFDD835)},
-    'mango':        {'color': Color(0xFFFB8C00)},
-    'orange':       {'color': Color(0xFFFF7043)},
-    'papaya':       {'color': Color(0xFF43A047)},
-    'strawberry':   {'color': Color(0xFFE91E63)},
+    'apple': {'color': Color(0xFFE53935)},
+    'banana': {'color': Color(0xFFFDD835)},
+    'mango': {'color': Color(0xFFFB8C00)},
+    'orange': {'color': Color(0xFFFF7043)},
+    'papaya': {'color': Color(0xFF43A047)},
+    'strawberry': {'color': Color(0xFFE91E63)},
     'dragon fruit': {'color': Color(0xFFAB47BC)},
   };
 
   static Color _maturityColor(String m) {
     switch (m.toLowerCase()) {
-      case 'unripe':   return const Color(0xFFFFD740);
-      case 'ripe':     return const Color(0xFF43A047);
-      case 'overripe': return const Color(0xFFE53935);
-      default:         return const Color(0xFF9E9E9E);
+      case 'unripe':
+        return const Color(0xFFFFD740);
+      case 'ripe':
+        return const Color(0xFF43A047);
+      case 'overripe':
+        return const Color(0xFFE53935);
+      default:
+        return const Color(0xFF9E9E9E);
     }
   }
 
   static String _maturityLabel(String m) {
     switch (m.toLowerCase()) {
-      case 'unripe':   return 'Mentah';
-      case 'ripe':     return 'Matang';
-      case 'overripe': return 'Busuk';
-      default:         return m[0].toUpperCase() + m.substring(1);
+      case 'unripe':
+        return 'Mentah';
+      case 'ripe':
+        return 'Matang';
+      case 'overripe':
+        return 'Busuk';
+      default:
+        return m[0].toUpperCase() + m.substring(1);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final total      = insights['total']     as int? ?? 0;
-    final byFruit    = insights['byFruit']   as Map<String, int>? ?? {};
+    final total = insights['total'] as int? ?? 0;
+    final byFruit = insights['byFruit'] as Map<String, int>? ?? {};
     final byMaturity = insights['byMaturity'] as Map<String, int>? ?? {};
 
     if (total == 0) return const SizedBox.shrink();
@@ -601,8 +640,11 @@ class _FilteredInsightPanel extends StatelessWidget {
       ..sort((a, b) => b.value.compareTo(a.value));
     const maturityOrder = ['unripe', 'ripe', 'overripe'];
     final sortedMaturities = byMaturity.entries.toList()
-      ..sort((a, b) =>
-          maturityOrder.indexOf(a.key).compareTo(maturityOrder.indexOf(b.key)));
+      ..sort(
+        (a, b) => maturityOrder
+            .indexOf(a.key)
+            .compareTo(maturityOrder.indexOf(b.key)),
+      );
     final maxFruit = sortedFruits.isEmpty ? 1 : sortedFruits.first.value;
 
     return Container(
@@ -623,13 +665,16 @@ class _FilteredInsightPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Distribusi Buah
-            _SectionTitle(icon: Icons.bar_chart_rounded, label: 'Distribusi Buah'),
+            _SectionTitle(
+              icon: Icons.bar_chart_rounded,
+              label: 'Distribusi Buah',
+            ),
             const SizedBox(height: 12),
             ...sortedFruits.map((e) {
-              final meta  = _fruitMeta[e.key];
+              final meta = _fruitMeta[e.key];
               final color = (meta?['color'] as Color?) ?? _pink;
-              final pct   = e.value / maxFruit;
-              final name  = e.key[0].toUpperCase() + e.key.substring(1);
+              final pct = e.value / maxFruit;
+              final name = e.key[0].toUpperCase() + e.key.substring(1);
               return Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Column(
@@ -638,26 +683,32 @@ class _FilteredInsightPanel extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: Text(name,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF3D1A2B),
-                              )),
+                          child: Text(
+                            name,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF3D1A2B),
+                            ),
+                          ),
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: color.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Text('${e.value}x',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: color,
-                              )),
+                          child: Text(
+                            '${e.value}x',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: color,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -686,13 +737,15 @@ class _FilteredInsightPanel extends StatelessWidget {
             // Tingkat Kematangan
             if (sortedMaturities.isNotEmpty) ...[
               _SectionTitle(
-                  icon: Icons.thermostat_rounded, label: 'Tingkat Kematangan'),
+                icon: Icons.thermostat_rounded,
+                label: 'Tingkat Kematangan',
+              ),
               const SizedBox(height: 12),
               Row(
                 children: sortedMaturities.map((e) {
-                  final color        = _maturityColor(e.key);
-                  final label        = _maturityLabel(e.key);
-                  final pctOfTotal   = total > 0
+                  final color = _maturityColor(e.key);
+                  final label = _maturityLabel(e.key);
+                  final pctOfTotal = total > 0
                       ? (e.value / total * 100).round()
                       : 0;
                   final isLast = e.key == sortedMaturities.last.key;
@@ -700,35 +753,45 @@ class _FilteredInsightPanel extends StatelessWidget {
                     child: Container(
                       margin: EdgeInsets.only(right: isLast ? 0 : 8),
                       padding: const EdgeInsets.symmetric(
-                          vertical: 12, horizontal: 10),
+                        vertical: 12,
+                        horizontal: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: color.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                            color: color.withOpacity(0.3), width: 1.5),
+                          color: color.withOpacity(0.3),
+                          width: 1.5,
+                        ),
                       ),
                       child: Column(
                         children: [
-                          Text('$pctOfTotal%',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                color: color,
-                              )),
+                          Text(
+                            '$pctOfTotal%',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: color,
+                            ),
+                          ),
                           const SizedBox(height: 2),
-                          Text(label,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: color.withOpacity(0.8),
-                              )),
-                          Text('${e.value} buah',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: color.withOpacity(0.6),
-                              )),
+                          Text(
+                            label,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: color.withOpacity(0.8),
+                            ),
+                          ),
+                          Text(
+                            '${e.value} buah',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: color.withOpacity(0.6),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -742,8 +805,6 @@ class _FilteredInsightPanel extends StatelessWidget {
     );
   }
 }
-
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Snapshot chip (di dalam header gradient)
@@ -768,10 +829,7 @@ class _SnapshotChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.18),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Colors.white.withOpacity(0.3),
-            width: 1,
-          ),
+          border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
         ),
         child: Column(
           children: [
@@ -897,10 +955,7 @@ class _FruiTellDropdownState extends State<FruiTellDropdown>
     _arrowAnim = Tween<double>(begin: 0, end: 0.5).animate(
       CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
     );
-    _fadeAnim = CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeOut,
-    );
+    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
   }
 
   @override
@@ -1002,8 +1057,8 @@ class _FruiTellDropdownState extends State<FruiTellDropdown>
               color: _isOpen
                   ? _pink
                   : isActive
-                      ? _pink.withOpacity(0.6)
-                      : _pinkMid,
+                  ? _pink.withOpacity(0.6)
+                  : _pinkMid,
               width: _isOpen ? 2 : 1.5,
             ),
             boxShadow: [
@@ -1103,10 +1158,7 @@ class _DropdownPanel extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.95),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: _pink.withOpacity(0.25),
-              width: 1.5,
-            ),
+            border: Border.all(color: _pink.withOpacity(0.25), width: 1.5),
             boxShadow: [
               BoxShadow(
                 color: _pink.withOpacity(0.18),
@@ -1174,8 +1226,8 @@ class _DropdownPanel extends StatelessWidget {
                           color: isSelected
                               ? Colors.white
                               : item == null
-                                  ? Colors.grey.shade300
-                                  : _pink.withOpacity(0.4),
+                              ? Colors.grey.shade300
+                              : _pink.withOpacity(0.4),
                         ),
                       ),
                       Expanded(
