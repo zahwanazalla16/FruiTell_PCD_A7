@@ -3,11 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../models/history_model.dart';
+import '../models/detection_result.dart';
+import '../services/dummy_content_service.dart';
+import 'scan_result_view.dart';
 
 class HomeView extends StatelessWidget {
-  const HomeView({super.key, required this.onStartScan});
+  const HomeView({super.key, required this.onStartScan, required this.onViewHistory});
 
   final VoidCallback onStartScan;
+  final VoidCallback onViewHistory;
 
   // Daftar tips harian
   static const List<String> _tipsList = [
@@ -254,10 +258,7 @@ class HomeView extends StatelessWidget {
                   ),
                   if (history.isNotEmpty)
                     TextButton(
-                      onPressed: () {
-                        // Jika NavigationBar dikontrol dari DashboardView, kita bisa
-                        // trigger lewat provider/controller. Sementara kosongi.
-                      },
+                      onPressed: onViewHistory,
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,
                         minimumSize: const Size(50, 30),
@@ -319,8 +320,33 @@ class HomeView extends StatelessWidget {
                           child: InkWell(
                             borderRadius: BorderRadius.circular(20),
                             onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Detail riwayat belum tersedia')),
+                              // Gunakan DummyContentService.enrich untuk membuat detail sama persis
+                              // dengan saat scan pertama kali.
+                              final enrichedResult = DummyContentService.enrich(item.label, item.confidence);
+                              
+                              // Jika di history ada data maturity/condition manual, kita override sedikit
+                              // agar sesuai (opsional, tapi disamakan dengan scan awal lebih baik)
+                              final finalResult = DetectionResult(
+                                label: enrichedResult.label,
+                                confidence: enrichedResult.confidence,
+                                ripeness: item.maturity ?? enrichedResult.ripeness,
+                                freshness: item.condition ?? enrichedResult.freshness,
+                                bestBefore: enrichedResult.bestBefore,
+                                tips: enrichedResult.tips,
+                              );
+                                             
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ScanResultView(
+                                    result: finalResult,
+                                    imageFile: File(item.imagePath ?? ''),
+                                    onSave: () async {
+                                      // Kosong karena sudah tersimpan di riwayat.
+                                      // Bisa menambahkan feedback UI.
+                                    },
+                                  ),
+                                ),
                               );
                             },
                             child: Padding(
