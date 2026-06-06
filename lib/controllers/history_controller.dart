@@ -50,7 +50,7 @@ class HistoryController extends ChangeNotifier {
 
   /// Helper: daftar tingkat kematangan unik yang ada di history.
   List<String> getAvailableMaturities() {
-    const order = ['ripe', 'unripe', 'overripe'];
+    const order = ['unripe', 'ripe', 'overripe'];
     final maturities = getHistory()
         .map(_maturityForItem)
         .where((m) => m.isNotEmpty)
@@ -93,6 +93,8 @@ class HistoryController extends ChangeNotifier {
     int matang = 0;
     int mentah = 0;
     int busuk = 0;
+    String latestFruit = '';
+    String latestMaturity = '';
 
     // Per buah: {fruitName: {matang, mentah, busuk, total}}
     final Map<String, Map<String, int>> byFruitBreakdown = {};
@@ -103,6 +105,11 @@ class HistoryController extends ChangeNotifier {
 
       // Gunakan item.maturity jika ada, fallback ke parsing label
       final mat = _maturityForItem(item);
+
+      if (latestMaturity.isEmpty && mat.isNotEmpty) {
+        latestFruit = fruit;
+        latestMaturity = mat;
+      }
 
       byFruitBreakdown.putIfAbsent(
         fruit,
@@ -136,28 +143,24 @@ class HistoryController extends ChangeNotifier {
       }
     });
 
-    // Headline dinamis
+    // Headline dinamis berdasarkan scan valid terbaru.
     String headline;
     if (totalScan == 0) {
       headline = 'Belum ada buah yang discan. Coba scan buah pertamamu!';
-    } else if (busuk > 0) {
-      headline = 'Perhatian! $busuk buah terdeteksi busuk, segera periksa.';
-    } else if (matang > 0) {
-      final topRipe = byFruitBreakdown.entries
-          .where((e) => (e.value['matang'] ?? 0) > 0)
-          .toList()
-        ..sort((a, b) =>
-            (b.value['matang'] ?? 0).compareTo(a.value['matang'] ?? 0));
-      final ripeFruitName = topRipe.isNotEmpty
-          ? topRipe.first.key[0].toUpperCase() + topRipe.first.key.substring(1)
-          : 'Buah';
-      final ripeCount = topRipe.isNotEmpty
-          ? (topRipe.first.value['matang'] ?? 0)
-          : matang;
-      headline =
-          '$ripeCount $ripeFruitName sudah matang dan siap dikonsumsi!';
+    } else if (latestMaturity.isEmpty) {
+      headline = 'Scan terbaru belum memiliki tingkat kematangan yang jelas.';
     } else {
-      headline = 'Semua buah masih mentah. Tunggu beberapa hari lagi.';
+      final fruitName = latestFruit.isNotEmpty
+          ? latestFruit[0].toUpperCase() + latestFruit.substring(1)
+          : 'Buah';
+
+      if (latestMaturity == 'overripe') {
+        headline = 'Scan terbaru menunjukkan $fruitName busuk. Segera periksa buah tersebut.';
+      } else if (latestMaturity == 'ripe') {
+        headline = 'Scan terbaru menunjukkan $fruitName matang dan siap dikonsumsi.';
+      } else {
+        headline = 'Scan terbaru menunjukkan $fruitName masih mentah. Pantau beberapa hari lagi.';
+      }
     }
 
     return {
@@ -167,6 +170,8 @@ class HistoryController extends ChangeNotifier {
       'busuk': busuk,
       'byFruitBreakdown': byFruitBreakdown,
       'topFruit': topFruit,
+      'latestFruit': latestFruit,
+      'latestMaturity': latestMaturity,
       'headline': headline,
     };
   }

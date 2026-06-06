@@ -436,16 +436,20 @@ class _SnapshotCard extends StatelessWidget {
     final mentah   = snapshotData['mentah']  as int? ?? 0;
     final busuk    = snapshotData['busuk']   as int? ?? 0;
     final headline = snapshotData['headline'] as String? ?? '';
+    final latestMaturity = snapshotData['latestMaturity'] as String? ?? '';
 
-    final isCritical = busuk > 0;
-    final headerColors = isCritical
-        ? [const Color(0xFFE53935), const Color(0xFFEF5350)]
-        : [const Color(0xFFE93E9D), const Color(0xFFFF6DBB)];
-    final headerIcon = isCritical
-        ? Icons.warning_amber_rounded
-        : matang > 0
-            ? Icons.check_circle_rounded
-            : Icons.hourglass_top_rounded;
+    final headerColors = switch (latestMaturity) {
+      'overripe' => [const Color(0xFFE53935), const Color(0xFFEF5350)],
+      'unripe' => [const Color(0xFFF9A825), const Color(0xFFFFD54F)],
+      'ripe' => [const Color(0xFF43A047), const Color(0xFF66BB6A)],
+      _ => [const Color(0xFFE93E9D), const Color(0xFFFF6DBB)],
+    };
+    final headerIcon = switch (latestMaturity) {
+      'overripe' => Icons.warning_amber_rounded,
+      'unripe' => Icons.hourglass_top_rounded,
+      'ripe' => Icons.check_circle_rounded,
+      _ => Icons.auto_awesome_rounded,
+    };
 
     return Container(
       decoration: BoxDecoration(
@@ -528,48 +532,17 @@ class _SnapshotCard extends StatelessWidget {
             // Stat chips
             Row(
               children: [
-                _SnapshotChip(label: 'Matang', count: matang,
-                    dotColor: const Color(0xFF69F0AE)),
-                const SizedBox(width: 8),
                 _SnapshotChip(label: 'Mentah', count: mentah,
                     dotColor: const Color(0xFFFFD740)),
+                const SizedBox(width: 8),
+                _SnapshotChip(label: 'Matang', count: matang,
+                    dotColor: const Color(0xFF69F0AE)),
                 const SizedBox(width: 8),
                 _SnapshotChip(label: 'Busuk', count: busuk,
                     dotColor: const Color(0xFFFF6E6E)),
               ],
             ),
 
-            // Alert busuk
-            if (busuk > 0) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.35), width: 1),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.error_outline_rounded,
-                        color: Colors.white, size: 15),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '$busuk buah terdeteksi busuk — segera buang agar tidak menular ke buah lain.',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ],
         ),
       ),
@@ -600,8 +573,8 @@ class _FilteredInsightPanel extends StatelessWidget {
 
   static Color _maturityColor(String m) {
     switch (m.toLowerCase()) {
-      case 'unripe':   return const Color(0xFF43A047);
-      case 'ripe':     return const Color(0xFFFFB300);
+      case 'unripe':   return const Color(0xFFFFD740);
+      case 'ripe':     return const Color(0xFF43A047);
       case 'overripe': return const Color(0xFFE53935);
       default:         return const Color(0xFF9E9E9E);
     }
@@ -626,8 +599,10 @@ class _FilteredInsightPanel extends StatelessWidget {
 
     final sortedFruits = byFruit.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
+    const maturityOrder = ['unripe', 'ripe', 'overripe'];
     final sortedMaturities = byMaturity.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+      ..sort((a, b) =>
+          maturityOrder.indexOf(a.key).compareTo(maturityOrder.indexOf(b.key)));
     final maxFruit = sortedFruits.isEmpty ? 1 : sortedFruits.first.value;
 
     return Container(
