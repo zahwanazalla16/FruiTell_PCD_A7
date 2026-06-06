@@ -5,6 +5,9 @@ import 'dart:ui';
 
 import '../controllers/history_controller.dart';
 import '../models/history_model.dart';
+import '../models/detection_result.dart';
+import '../services/dummy_content_service.dart';
+import 'scan_result_view.dart';
 
 class HistoryView extends StatefulWidget {
   const HistoryView({super.key});
@@ -285,13 +288,39 @@ class _HistoryViewState extends State<HistoryView> {
 
   List<Widget> _buildHistoryItems(List<HistoryModel> history) {
     return history.map((item) {
-      return Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF7E1EA),
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
           borderRadius: BorderRadius.circular(20),
-        ),
+          onTap: () {
+            final enrichedResult = DummyContentService.enrich(item.label, item.confidence);
+            final finalResult = DetectionResult(
+              label: enrichedResult.label,
+              confidence: enrichedResult.confidence,
+              ripeness: item.maturity ?? enrichedResult.ripeness,
+              freshness: item.condition ?? enrichedResult.freshness,
+              bestBefore: enrichedResult.bestBefore,
+              tips: enrichedResult.tips,
+            );
+            
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ScanResultView(
+                  result: finalResult,
+                  imageFile: File(item.imagePath ?? ''),
+                  onSave: () async {},
+                ),
+              ),
+            );
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF7E1EA),
+              borderRadius: BorderRadius.circular(20),
+            ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -341,7 +370,9 @@ class _HistoryViewState extends State<HistoryView> {
             ),
           ],
         ),
-      );
+      ), // Close Container
+      ), // Close InkWell
+      ); // Close Material
     }).toList();
   }
 
