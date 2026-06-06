@@ -529,19 +529,7 @@ class _SnapshotCard extends StatelessWidget {
             // Label
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Icon(
-                    Icons.auto_awesome_rounded,
-                    size: 12,
-                    color: Colors.white.withOpacity(0.9),
-                  ),
-                ),
-                const SizedBox(width: 6),
+
                 Text(
                   'Snapshot Terkini',
                   style: TextStyle(
