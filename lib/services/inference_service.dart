@@ -114,6 +114,20 @@ class InferenceService {
       throw Exception('Gagal men-decode gambar');
     }
 
+    // Crop ke area kotak scan di tengah (70% dari sisi terpendek)
+    final int minDim = math.min(originalImage.width, originalImage.height);
+    final int cropSize = (minDim * 0.70).round();
+    final int cropX = (originalImage.width - cropSize) ~/ 2;
+    final int cropY = (originalImage.height - cropSize) ~/ 2;
+
+    final img.Image croppedImage = img.copyCrop(
+      originalImage,
+      x: cropX,
+      y: cropY,
+      width: cropSize,
+      height: cropSize,
+    );
+
     img.Image resizeAndPad(img.Image image, int targetSize) {
       final scale = math.min(targetSize / image.width, targetSize / image.height);
       final resizedWidth = (image.width * scale).round();
@@ -295,12 +309,12 @@ class InferenceService {
     img.Image processedImage;
     Uint8List? processedJpgBytes;
     if (!params.overwriteOriginal) {
-      processedImage = resizeAndPad(originalImage, 640);
+      processedImage = resizeAndPad(croppedImage, 640);
       processedImage = enhanceForLowLight(processedImage);
     } else {
       // Untuk foto final, tetap proses yang agak besar tapi tetap di-resize ke ukuran wajar (misal 1024)
       // agar tidak membakar CPU.
-      processedImage = resizeAndPad(originalImage, 1024);
+      processedImage = resizeAndPad(croppedImage, 1024);
       processedImage = enhanceForLowLight(processedImage);
 
       // Simpan hasil PCD kembali ke file
