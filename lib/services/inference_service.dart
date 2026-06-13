@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
 import 'package:hive/hive.dart';
@@ -362,6 +363,9 @@ class InferenceService {
       final outputShape = _interpreter!.getOutputTensor(0).shape;
       final outputSize = outputShape.fold<int>(1, (acc, dim) => acc * dim);
       final output = List.filled(outputSize, 0.0).reshape(outputShape);
+      final outputShape = _interpreter!.getOutputTensor(0).shape;
+      final outputSize = outputShape.fold<int>(1, (acc, dim) => acc * dim);
+      final output = List.filled(outputSize, 0.0).reshape(outputShape);
 
       _interpreter!.run(processResult.inputTensor, output);
 
@@ -532,4 +536,236 @@ class InferenceService {
   void close() {
     _interpreter?.close();
   }
+}
+
+// Parametrik preprocess di Isolate
+class _PreprocessParams {
+  final List<int> imageBytes;
+  final bool overwriteOriginal;
+  final String? imagePath;
+  final bool contrastEnhancementEnabled;
+  final double contrastBoost;
+  final double brightnessManual;
+  final double lowLightLumaThreshold;
+
+  _PreprocessParams({
+    required this.imageBytes,
+    required this.overwriteOriginal,
+    this.imagePath,
+    required this.contrastEnhancementEnabled,
+    required this.contrastBoost,
+    required this.brightnessManual,
+    required this.lowLightLumaThreshold,
+  });
+}
+
+// Top-level function untuk compute (dijalankan di background Isolate)
+Future<List<List<List<List<double>>>>> _preprocessImageJob(_PreprocessParams params) async {
+  final originalImage = img.decodeImage(Uint8List.fromList(params.imageBytes));
+  if (originalImage == null) {
+    throw Exception("Gagal decode gambar");
+  }
+
+  img.Image processedImage;
+  if (!params.overwriteOriginal) {
+    processedImage = _resizeAndPadStatic(originalImage, 640);
+    processedImage = _enhanceForLowLightStatic(processedImage, params);
+  } else {
+    // Untuk foto final, tetap proses yang agak besar
+    processedImage = _resizeAndPadStatic(originalImage, 1024);
+    processedImage = _enhanceForLowLightStatic(processedImage, params);
+
+    // Simpan hasil PCD kembali ke file di background thread (aman dari hambatan I/O)
+    if (params.imagePath != null) {
+      final bytes = img.encodeJpg(processedImage, quality: 85);
+      final file = File(params.imagePath!);
+      await file.writeAsBytes(bytes);
+    }
+
+    // Resize lagi ke 640 untuk input model AI
+    processedImage = _resizeAndPadStatic(processedImage, 640);
+  }
+
+  return _imageToTensorStatic(processedImage);
+}
+
+img.Image _resizeAndPadStatic(img.Image image, int targetSize) {
+  final scale = math.min(targetSize / image.width, targetSize / image.height);
+  final resizedWidth = (image.width * scale).round();
+  final resizedHeight = (image.height * scale).round();
+
+  final resized = img.copyResize(
+    image,
+    width: resizedWidth,
+    height: resizedHeight,
+    interpolation: img.Interpolation.linear,
+  );
+
+  final canvas = img.Image(width: targetSize, height: targetSize);
+  img.fill(canvas, color: img.ColorRgb8(114, 114, 114));
+  final dx = (targetSize - resizedWidth) ~/ 2;
+  final dy = (targetSize - resizedHeight) ~/ 2;
+  img.compositeImage(canvas, resized, dstX: dx, dstY: dy);
+  return canvas;
+}
+
+img.Image _enhanceForLowLightStatic(img.Image source, _PreprocessParams params) {
+  final avgLuma = _computeAverageLumaStatic(source);
+
+  // Kurangi sensor noise terlebih dahulu
+  img.Image processed = img.gaussianBlur(source, radius: 1);
+
+  if (!params.contrastEnhancementEnabled) {
+    return processed;
+  }
+
+  if (avgLuma < params.lowLightLumaThreshold) {
+    processed = _equalizeLuminanceStatic(processed);
+    processed = _applyBrightnessContrastStatic(
+      processed,
+      brightnessOffset: (18 + params.brightnessManual).round(),
+      contrastFactor: 1.12 * params.contrastBoost,
+    );
+    print(
+      'Preprocess Isolate: low-light mode enabled (avgLuma=${avgLuma.toStringAsFixed(1)})',
+    );
+  } else {
+    processed = _applyBrightnessContrastStatic(
+      processed,
+      brightnessOffset: (4 + params.brightnessManual).round(),
+      contrastFactor: 1.04 * params.contrastBoost,
+    );
+  }
+
+  return processed;
+}
+
+double _computeAverageLumaStatic(img.Image image) {
+  var total = 0.0;
+  final pixelCount = image.width * image.height;
+
+  for (int y = 0; y < image.height; y++) {
+    for (int x = 0; x < image.width; x++) {
+      final p = image.getPixel(x, y);
+      total += 0.299 * p.r + 0.587 * p.g + 0.114 * p.b;
+    }
+  }
+
+  return pixelCount == 0 ? 0.0 : total / pixelCount;
+}
+
+img.Image _applyBrightnessContrastStatic(
+  img.Image image, {
+  required int brightnessOffset,
+  required double contrastFactor,
+}) {
+  final out = img.Image.from(image);
+
+  for (int y = 0; y < out.height; y++) {
+    for (int x = 0; x < out.width; x++) {
+      final p = out.getPixel(x, y);
+
+      int remap(int value) {
+        final contrasted = ((value - 128) * contrastFactor + 128).round();
+        final withOffset = contrasted + brightnessOffset;
+        if (withOffset < 0) return 0;
+        if (withOffset > 255) return 255;
+        return withOffset;
+      }
+
+      out.setPixelRgba(
+        x,
+        y,
+        remap(p.r.toInt()),
+        remap(p.g.toInt()),
+        remap(p.b.toInt()),
+        p.a.toInt(),
+      );
+    }
+  }
+
+  return out;
+}
+
+img.Image _equalizeLuminanceStatic(img.Image image) {
+  final out = img.Image.from(image);
+  final histogram = List<int>.filled(256, 0);
+
+  for (int y = 0; y < out.height; y++) {
+    for (int x = 0; x < out.width; x++) {
+      final p = out.getPixel(x, y);
+      final yLuma = (0.299 * p.r + 0.587 * p.g + 0.114 * p.b).round();
+      histogram[yLuma]++;
+    }
+  }
+
+  final cdf = List<int>.filled(256, 0);
+  cdf[0] = histogram[0];
+  for (int i = 1; i < 256; i++) {
+    cdf[i] = cdf[i - 1] + histogram[i];
+  }
+
+  final total = out.width * out.height;
+  final cdfMin = cdf.firstWhere((v) => v > 0, orElse: () => 0);
+  if (total <= cdfMin) {
+    return out;
+  }
+
+  final lut = List<int>.filled(256, 0);
+  for (int i = 0; i < 256; i++) {
+    lut[i] = (((cdf[i] - cdfMin) / (total - cdfMin)) * 255)
+        .round()
+        .toInt()
+        .clamp(0, 255)
+        .toInt();
+  }
+
+  for (int y = 0; y < out.height; y++) {
+    for (int x = 0; x < out.width; x++) {
+      final p = out.getPixel(x, y);
+      final oldY = (0.299 * p.r + 0.587 * p.g + 0.114 * p.b).round();
+      final newY = lut[oldY];
+      final scale = oldY <= 0 ? 1.0 : newY / oldY;
+
+      int remap(int channel) {
+        final scaled = (channel * scale).round();
+        final blended = ((scaled * 0.7) + (channel * 0.3)).round();
+        if (blended < 0) return 0;
+        if (blended > 255) return 255;
+        return blended;
+      }
+
+      out.setPixelRgba(
+        x,
+        y,
+        remap(p.r.toInt()),
+        remap(p.g.toInt()),
+        remap(p.b.toInt()),
+        p.a.toInt(),
+      );
+    }
+  }
+
+  return out;
+}
+
+List<List<List<List<double>>>> _imageToTensorStatic(img.Image image) {
+  final inputSize = image.width;
+  var input = List.generate(
+    1,
+    (_) => List.generate(
+      inputSize,
+      (_) => List.generate(inputSize, (_) => List<double>.filled(3, 0.0)),
+    ),
+  );
+
+  for (int y = 0; y < inputSize; y++) {
+    for (int x = 0; x < inputSize; x++) {
+      final pixel = image.getPixel(x, y);
+      input[0][y][x][0] = pixel.r / 255.0;
+      input[0][y][x][1] = pixel.g / 255.0;
+      input[0][y][x][2] = pixel.b / 255.0;
+    }
+  }
+  return input;
 }

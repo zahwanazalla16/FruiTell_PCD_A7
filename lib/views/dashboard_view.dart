@@ -18,7 +18,10 @@ class _DashboardViewState extends State<DashboardView> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      HomeView(onStartScan: () => setState(() => _selectedIndex = 1)),
+      HomeView(
+        onStartScan: () => setState(() => _selectedIndex = 1),
+        onViewHistory: () => setState(() => _selectedIndex = 2),
+      ),
       const ScanView(),
       const HistoryView(),
     ];

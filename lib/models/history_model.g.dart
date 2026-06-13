@@ -22,13 +22,19 @@ class HistoryModelAdapter extends TypeAdapter<HistoryModel> {
       date: fields[2] as DateTime,
       imagePath: fields[3] as String?,
       isSynced: fields[4] as bool,
+      remoteId: fields[5] as String?,
+      maturity: fields[6] as String?,
+      condition: fields[7] as String?,
+      localUpdatedAt: fields[8] as DateTime?,
+      syncedAt: fields[9] as DateTime?,
+      id: fields[10] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, HistoryModel obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.label)
       ..writeByte(1)
@@ -38,7 +44,19 @@ class HistoryModelAdapter extends TypeAdapter<HistoryModel> {
       ..writeByte(3)
       ..write(obj.imagePath)
       ..writeByte(4)
-      ..write(obj.isSynced);
+      ..write(obj.isSynced)
+      ..writeByte(5)
+      ..write(obj.remoteId)
+      ..writeByte(6)
+      ..write(obj.maturity)
+      ..writeByte(7)
+      ..write(obj.condition)
+      ..writeByte(8)
+      ..write(obj.localUpdatedAt)
+      ..writeByte(9)
+      ..write(obj.syncedAt)
+      ..writeByte(10)
+      ..write(obj.id);
   }
 
   @override

@@ -27,7 +27,7 @@ class ScanController extends ChangeNotifier {
   double _contrastLevel = 1.0;
   double _brightnessLevel = 0.0;
 
-  static const int _stabilityWindow = 3;
+  static const int _stabilityWindow = 2;
 
   // Getters
   CameraController? get controller => _controller;
@@ -71,8 +71,8 @@ class ScanController extends ChangeNotifier {
       _inferenceService.setBrightnessManual(_brightnessLevel);
       notifyListeners();
 
-      // Mulai deteksi real-time setiap 3 detik (diperlama dari 2s untuk hemat CPU)
-      _detectTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      // Mulai deteksi real-time setiap 1.5 detik (dipercepat karena PCD dipindah ke Isolate)
+      _detectTimer = Timer.periodic(const Duration(milliseconds: 1500), (_) {
         _runRealtimeDetection();
       });
     } catch (e) {
@@ -320,6 +320,23 @@ class ScanController extends ChangeNotifier {
     } catch (e) {
       _errorMessage = 'Error flashlight: $e';
       notifyListeners();
+    }
+  }
+
+  /// Hentikan sementara deteksi real-time (misal ketika membuka halaman hasil)
+  void pauseDetection() {
+    _detectTimer?.cancel();
+    _detectTimer = null;
+    print("Real-time detection paused.");
+  }
+
+  /// Lanjutkan kembali deteksi real-time
+  void resumeDetection() {
+    if (_detectTimer == null && _isModelReady && (_controller?.value.isInitialized ?? false)) {
+      _detectTimer = Timer.periodic(const Duration(milliseconds: 1500), (_) {
+        _runRealtimeDetection();
+      });
+      print("Real-time detection resumed.");
     }
   }
 
