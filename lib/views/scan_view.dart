@@ -254,30 +254,32 @@ class _ScanViewState extends State<ScanView> with SingleTickerProviderStateMixin
                              ),
                              tooltip: 'Kembali',
                            ),
-                           const SizedBox(width: 4),
+                           const SizedBox(width: 2),
                          ],
                          Expanded(
-                           child: Row(
-                             children: [
-                               const Text(
-                                 'Enhance Kontras',
-                                 style: TextStyle(
-                                   color: Colors.white,
-                                   fontWeight: FontWeight.w600,
-                                 ),
-                               ),
-                               const SizedBox(width: 8),
-                               Switch(
-                                 value: _controller.contrastEnhancementEnabled,
-                                 onChanged: (val) {
-                                   _controller.setContrastEnhancementEnabled(val);
-                                   setState(() {
-                                     _showSliders = val;
-                                   });
-                                 },
-                                 activeThumbColor: const Color(0xFFE93E9D),
-                               ),
-                             ],
+                           child: Text(
+                             'Enhance Kontras',
+                             style: const TextStyle(
+                               color: Colors.white,
+                               fontWeight: FontWeight.w600,
+                               fontSize: 14,
+                             ),
+                             maxLines: 1,
+                             overflow: TextOverflow.ellipsis,
+                           ),
+                         ),
+                         const SizedBox(width: 4),
+                         Transform.scale(
+                           scale: 0.85,
+                           child: Switch(
+                             value: _controller.contrastEnhancementEnabled,
+                             onChanged: (val) {
+                               _controller.setContrastEnhancementEnabled(val);
+                               setState(() {
+                                 _showSliders = val;
+                               });
+                             },
+                             activeThumbColor: const Color(0xFFE93E9D),
                            ),
                          ),
                          if (_controller.contrastEnhancementEnabled) ...[
