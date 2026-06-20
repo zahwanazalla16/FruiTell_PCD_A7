@@ -450,7 +450,9 @@ class InferenceService {
     String? imagePath,
     bool syncCloud = false,
   }) async {
-    final item = await _saveToHive(label, confidence, imagePath: imagePath);
+    // Ambil user aktif dari Supabase
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    final item = await _saveToHive(label, confidence, imagePath: imagePath, userId: userId);
 
     if (syncCloud && item != null) {
       // Jalankan sinkronisasi awan di background agar User tidak perlu menunggu (langsung).
@@ -464,6 +466,7 @@ class InferenceService {
     String label,
     double confidence, {
     String? imagePath,
+    String? userId,
   }) async {
     try {
       var box = Hive.box<HistoryModel>('historyBox');
@@ -473,9 +476,10 @@ class InferenceService {
         date: DateTime.now(),
         imagePath: imagePath,
         isSynced: false, // Mark sebagai pending sync
+        userId: userId,  // Simpan userId pemilik data
       );
       await box.add(newHistory);
-      print(" Data tersimpan di Hive (pending sync ke Supabase)");
+      print(" Data tersimpan di Hive (userId: $userId, pending sync ke Supabase)");
       return newHistory;
     } catch (e) {
       print(" Gagal simpan ke Hive: $e");
@@ -508,11 +512,14 @@ class InferenceService {
     }
   }
 
-  // Retry sync untuk semua item yang pending
+  // Retry sync untuk semua item yang pending — hanya milik user aktif
   Future<int> syncPendingResults() async {
     try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
       var box = Hive.box<HistoryModel>('historyBox');
-      final pendingItems = box.values.where((item) => !item.isSynced).toList();
+      final pendingItems = box.values
+          .where((item) => !item.isSynced && item.userId == userId)
+          .toList();
       int syncedCount = 0;
 
       for (final item in pendingItems) {
@@ -521,7 +528,7 @@ class InferenceService {
       }
 
       print(
-        ' Sinkron selesai: $syncedCount item dari ${pendingItems.length} pending items',
+        ' Sinkron selesai: $syncedCount item dari ${pendingItems.length} pending items (userId: $userId)',
       );
       return syncedCount;
     } catch (e) {

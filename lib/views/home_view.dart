@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/history_model.dart';
 import '../models/detection_result.dart';
@@ -30,7 +31,13 @@ class HomeView extends StatelessWidget {
     return ValueListenableBuilder<Box<HistoryModel>>(
       valueListenable: Hive.box<HistoryModel>('historyBox').listenable(),
       builder: (context, box, child) {
-        final history = box.values.toList().reversed.toList();
+        // Filter hanya data milik user yang sedang login
+        final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+        final history = box.values
+            .where((item) => item.userId == currentUserId)
+            .toList()
+            .reversed
+            .toList();
         final totalDetections = history.length;
 
         // Hitung kesegaran berdasarkan label hasil AI (Ripe/Unripe/Overripe)

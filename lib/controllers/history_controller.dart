@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/history_model.dart';
 import '../services/inference_service.dart';
@@ -11,11 +12,21 @@ class HistoryController extends ChangeNotifier {
   // Getters
   bool get isRetrying => _isRetrying;
 
-  /// Ambil semua history dari Hive
+  /// Ambil user_id yang sedang login (null jika belum login)
+  String? _currentUserId() {
+    return Supabase.instance.client.auth.currentUser?.id;
+  }
+
+  /// Ambil semua history dari Hive — difilter berdasarkan user aktif
   List<HistoryModel> getHistory() {
     try {
+      final userId = _currentUserId();
       final box = Hive.box<HistoryModel>('historyBox');
-      return box.values.toList().reversed.toList();
+      return box.values
+          .where((item) => item.userId == userId)
+          .toList()
+          .reversed
+          .toList();
     } catch (e) {
       print('Error fetch history: $e');
       return [];
@@ -225,9 +236,9 @@ class HistoryController extends ChangeNotifier {
     return '';
   }
 
-  /// Hitung item yang pending sync
+  /// Hitung item yang pending sync — hanya milik user aktif
   int getPendingCount() {
-    final history = getHistory();
+    final history = getHistory(); // sudah terfilter per userId
     return history.where((item) => !item.isSynced).length;
   }
 

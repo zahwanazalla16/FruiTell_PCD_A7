@@ -1,4 +1,5 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// (Manually updated to add userId field at HiveField 11)
 
 part of 'history_model.dart';
 
@@ -28,13 +29,14 @@ class HistoryModelAdapter extends TypeAdapter<HistoryModel> {
       localUpdatedAt: fields[8] as DateTime?,
       syncedAt: fields[9] as DateTime?,
       id: fields[10] as String?,
+      userId: fields[11] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, HistoryModel obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.label)
       ..writeByte(1)
@@ -56,7 +58,9 @@ class HistoryModelAdapter extends TypeAdapter<HistoryModel> {
       ..writeByte(9)
       ..write(obj.syncedAt)
       ..writeByte(10)
-      ..write(obj.id);
+      ..write(obj.id)
+      ..writeByte(11)
+      ..write(obj.userId);
   }
 
   @override

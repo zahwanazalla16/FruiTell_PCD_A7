@@ -38,6 +38,9 @@ class HistoryModel extends HiveObject {
   @HiveField(10)
   final String id; // lokal unique id
 
+  @HiveField(11)
+  String? userId; // Supabase user id pemilik data ini
+
   HistoryModel({
     required this.label,
     required this.confidence,
@@ -50,6 +53,7 @@ class HistoryModel extends HiveObject {
     DateTime? localUpdatedAt,
     this.syncedAt,
     String? id,
+    this.userId,
   }) : localUpdatedAt = localUpdatedAt ?? DateTime.now(),
        id = id ?? DateTime.now().millisecondsSinceEpoch.toString();
 }

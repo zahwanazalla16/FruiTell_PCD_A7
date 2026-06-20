@@ -15,8 +15,12 @@ class ProfileView extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
     final historyBox = Hive.box<HistoryModel>('historyBox');
-    final totalScans = historyBox.length;
-    final pendingSync = historyBox.values.where((item) => !item.isSynced).length;
+    // Filter hanya data milik user yang sedang login
+    final myHistory = historyBox.values
+        .where((item) => item.userId == user?.id)
+        .toList();
+    final totalScans = myHistory.length;
+    final pendingSync = myHistory.where((item) => !item.isSynced).length;
 
     // Onboarding Palette
     const Color brandDark = Color(0xFF7D2F54); // Deep Berry
