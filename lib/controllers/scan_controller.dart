@@ -144,20 +144,6 @@ class ScanController extends ChangeNotifier {
     return DominantDetection(label: lastLabel, confidence: avgConfidence);
   }
 
-  /// Hentikan sementara deteksi real-time
-  void pauseDetection() {
-    _detectTimer?.cancel();
-    _detectTimer = null;
-  }
-
-  /// Mulai kembali deteksi real-time
-  void resumeDetection() {
-    if (_controller == null || !_controller!.value.isInitialized) return;
-    _detectTimer?.cancel();
-    _detectTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      _runRealtimeDetection();
-    });
-  }
 
   /// Confirm dan ambil foto final untuk result
   Future<DetectionResult?> confirmAndCapture() async {

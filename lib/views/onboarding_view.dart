@@ -112,7 +112,7 @@ class OnboardingView extends StatelessWidget {
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 20.0),
                       child: Text(
-                        'Discover the freshest path to a healthier you.',
+                        'Temukan jalan tersegar menuju dirimu yang lebih sehat.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 16,
@@ -129,7 +129,7 @@ class OnboardingView extends StatelessWidget {
                 Column(
                   children: [
                     const Text(
-                      'ANALYZING FRESHNESS...',
+                      'MENGANALISIS KESEGARAN...',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
@@ -190,7 +190,7 @@ class OnboardingView extends StatelessWidget {
                               ),
                               SizedBox(width: 10),
                               Text(
-                                'Get Started',
+                                'Mulai Sekarang',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w700,
@@ -207,7 +207,7 @@ class OnboardingView extends StatelessWidget {
 
                 // Copyright footer
                 const Text(
-                  '© 2024 FruiTell. All rights reserved.',
+                  '© 2024 FruiTell. Semua hak dilindungi.',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey,

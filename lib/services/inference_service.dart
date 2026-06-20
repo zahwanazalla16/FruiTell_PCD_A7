@@ -363,9 +363,6 @@ class InferenceService {
       final outputShape = _interpreter!.getOutputTensor(0).shape;
       final outputSize = outputShape.fold<int>(1, (acc, dim) => acc * dim);
       final output = List.filled(outputSize, 0.0).reshape(outputShape);
-      final outputShape = _interpreter!.getOutputTensor(0).shape;
-      final outputSize = outputShape.fold<int>(1, (acc, dim) => acc * dim);
-      final output = List.filled(outputSize, 0.0).reshape(outputShape);
 
       _interpreter!.run(processResult.inputTensor, output);
 

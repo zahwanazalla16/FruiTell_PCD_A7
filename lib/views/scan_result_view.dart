@@ -49,24 +49,7 @@ class _ScanResultViewState extends State<ScanResultView> {
                       fit: BoxFit.cover,
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF6BFD3),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '${widget.result.ripeness}! ${(widget.result.confidence * 100).toStringAsFixed(0)}%',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
+
                 ],
               ),
             ),
@@ -108,75 +91,42 @@ class _ScanResultViewState extends State<ScanResultView> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    // Best Eat Date Section
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            '📅 Best Eat Date',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF666666),
+                    if (widget.result.storageMethod != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          children: [
+                            const Text(
+                              '💾 ',
+                              style: TextStyle(fontSize: 16),
                             ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            widget.result.bestEatRange ?? 'Tidak diketahui',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFFE93E9D),
-                            ),
-                          ),
-                          if (widget.result.storageMethod != null) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              '💾 ${widget.result.storageMethod!}',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFF666666),
+                            Expanded(
+                              child: Text(
+                                widget.result.storageMethod!,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF666666),
+                                ),
                               ),
                             ),
                           ],
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
               const SizedBox(height: 16),
             ],
 
-            // Status & Best Before (fallback info)
-            Row(
-              children: [
-                Expanded(
-                  child: _InfoCard(
-                    icon: Icons.restaurant,
-                    title: 'Status',
-                    value: widget.result.ripeness,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _InfoCard(
-                    icon: Icons.calendar_today,
-                    title: 'Best Before',
-                    value: widget.result.bestBefore,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+
 
             // Prep Tips Section
             const Align(
@@ -273,42 +223,6 @@ class _ScanResultViewState extends State<ScanResultView> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _InfoCard extends StatelessWidget {
-  const _InfoCard({
-    required this.icon,
-    required this.title,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String title;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon),
-          const SizedBox(height: 8),
-          Text(title, style: const TextStyle(color: Colors.black54)),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-          ),
-        ],
       ),
     );
   }

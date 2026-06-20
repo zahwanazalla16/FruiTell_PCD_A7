@@ -77,14 +77,14 @@ class HomeView extends StatelessWidget {
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFFE93E9D), Color(0xFFFF75B5)],
+                    colors: [Color(0xFFFFD1E6), Color(0xFFFFF9E6), Color(0xFFFFF6B8)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(28),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFE93E9D).withOpacity(0.3),
+                      color: const Color(0xFF7D2F54).withOpacity(0.12),
                       blurRadius: 15,
                       offset: const Offset(0, 8),
                     ),
@@ -94,21 +94,22 @@ class HomeView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Cek Buahmu\nSekarang!',
+                      'Cek Buahmu Sekarang!',
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
+                        color: Color(0xFF7D2F54),
+                        fontSize: 20,
                         fontWeight: FontWeight.w800,
-                        height: 1.2,
+                        letterSpacing: -0.5,
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Text(
+                    const Text(
                       'Pastikan kematangan & kesegaran buah favoritmu hanya dengan satu jepretan.',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 14,
+                        color: Color(0xFF6A5A62),
+                        fontSize: 13,
                         height: 1.4,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -116,8 +117,9 @@ class HomeView extends StatelessWidget {
                       onPressed: onStartScan,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFFE93E9D),
-                        elevation: 0,
+                        foregroundColor: const Color(0xFF7D2F54),
+                        elevation: 4,
+                        shadowColor: const Color(0xFF7D2F54).withOpacity(0.15),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
                           vertical: 12,
@@ -149,7 +151,7 @@ class HomeView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
+                      color: const Color(0xFF7D2F54).withOpacity(0.04),
                       blurRadius: 15,
                       offset: const Offset(0, 8),
                     ),
@@ -183,14 +185,14 @@ class HomeView extends StatelessWidget {
                                 style: const TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1E293B),
+                                  color: Color(0xFF7D2F54),
                                 ),
                               ),
                               const Text(
                                 'Segar',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Color(0xFF64748B),
+                                  color: Color(0xFF6A5A62),
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -209,8 +211,8 @@ class HomeView extends StatelessWidget {
                             'Ringkasan',
                             style: TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF334155),
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF3D1A2B),
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -251,9 +253,9 @@ class HomeView extends StatelessWidget {
                   const Text(
                     'Riwayat Terakhir',
                     style: TextStyle(
-                      fontSize: 22, 
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E293B),
+                      fontSize: 20, 
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF3D1A2B),
                     ),
                   ),
                   if (history.isNotEmpty)
@@ -266,7 +268,11 @@ class HomeView extends StatelessWidget {
                       ),
                       child: const Text(
                         'Lihat Semua',
-                        style: TextStyle(color: Color(0xFFE93E9D), fontSize: 14),
+                        style: TextStyle(
+                          color: Color(0xFFE93E9D), 
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                 ],
@@ -300,20 +306,14 @@ class HomeView extends StatelessWidget {
                   children: history.take(2).map((item) {
                     final label = item.label.split(' ');
                     final scanTime = '${item.date.day.toString().padLeft(2, '0')}/${item.date.month.toString().padLeft(2, '0')} ${item.date.hour.toString().padLeft(2, '0')}:${item.date.minute.toString().padLeft(2, '0')}';
+                    final isLast = item == history.take(2).last;
 
                     return Expanded(
                       child: Container(
-                        margin: const EdgeInsets.only(right: 12),
+                        margin: EdgeInsets.only(right: isLast ? 0 : 12),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: const Color(0xFFF7E1EA), // Match history view item color!
                           borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
                         ),
                         child: Material(
                           color: Colors.transparent,
@@ -366,11 +366,11 @@ class HomeView extends StatelessWidget {
                                         : Container(
                                             height: 90,
                                             width: double.infinity,
-                                            color: const Color(0xFFF1F5F9),
+                                            color: Colors.white,
                                             child: const Icon(
                                               Icons.image_rounded,
                                               size: 32,
-                                              color: Color(0xFF94A3B8),
+                                              color: Color(0xFFE93E9D),
                                             ),
                                           ),
                                   ),
@@ -380,7 +380,7 @@ class HomeView extends StatelessWidget {
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w700,
-                                      color: Color(0xFF334155),
+                                      color: Color(0xFF3D1A2B),
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -388,13 +388,14 @@ class HomeView extends StatelessWidget {
                                   const SizedBox(height: 4),
                                   Row(
                                     children: [
-                                      const Icon(Icons.access_time_rounded, size: 12, color: Color(0xFF94A3B8)),
+                                      const Icon(Icons.access_time_rounded, size: 12, color: Color(0xFF876F7A)),
                                       const SizedBox(width: 4),
                                       Text(
                                         scanTime,
                                         style: const TextStyle(
-                                          color: Color(0xFF94A3B8),
+                                          color: Color(0xFF876F7A),
                                           fontSize: 12,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                     ],
@@ -416,12 +417,9 @@ class HomeView extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFE0F2FE), Color(0xFFBAE6FD)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: const Color(0xFFFFF3F8),
                   borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: const Color(0xFFFFD1E6), width: 1.5),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -432,7 +430,7 @@ class HomeView extends StatelessWidget {
                         color: Colors.white,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.lightbulb_outline_rounded, color: Color(0xFF0284C7), size: 24),
+                      child: const Icon(Icons.lightbulb_outline_rounded, color: Color(0xFF7D2F54), size: 24),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -444,7 +442,7 @@ class HomeView extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 16, 
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF0369A1),
+                              color: Color(0xFF7D2F54),
                             ),
                           ),
                           const SizedBox(height: 6),
@@ -452,7 +450,7 @@ class HomeView extends StatelessWidget {
                             tipHariIni,
                             style: const TextStyle(
                               fontSize: 14, 
-                              color: Color(0xFF0C4A6E),
+                              color: Color(0xFF6A5A62),
                               height: 1.4,
                             ),
                           ),
@@ -492,7 +490,7 @@ class _LegendItem extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+            style: const TextStyle(fontSize: 13, color: Color(0xFF6A5A62)),
           ),
         ),
         Text(
@@ -500,7 +498,7 @@ class _LegendItem extends StatelessWidget {
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF1E293B),
+            color: Color(0xFF3D1A2B),
           ),
         ),
       ],
