@@ -67,34 +67,12 @@ class OnboardingView extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Custom Fruit Silhouette Icon
-                        Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: const Color(0xFF7D2F54),
-                              width: 3.5,
-                            ),
-                          ),
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              Positioned(
-                                top: -8,
-                                right: -4,
-                                child: Transform.rotate(
-                                  angle: 0.5,
-                                  child: const Icon(
-                                    Icons.eco,
-                                    size: 14,
-                                    color: Color(0xFF7D2F54),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                        // Brand Logo Icon
+                        Image.asset(
+                          'assets/images/LogoFruiTell.png',
+                          width: 36,
+                          height: 36,
+                          fit: BoxFit.contain,
                         ),
                         const SizedBox(width: 8),
                         const Text(

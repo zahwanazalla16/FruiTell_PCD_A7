@@ -7,7 +7,9 @@ import '../controllers/scan_controller.dart';
 import 'scan_result_view.dart';
 
 class ScanView extends StatefulWidget {
-  const ScanView({super.key});
+  const ScanView({super.key, this.onBack});
+
+  final VoidCallback? onBack;
 
   @override
   State<ScanView> createState() => _ScanViewState();
@@ -17,6 +19,7 @@ class _ScanViewState extends State<ScanView> with SingleTickerProviderStateMixin
   late final ScanController _controller;
   late final AnimationController _animationController;
   late final Animation<double> _laserAnimation;
+  bool _showSliders = false;
 
   ColorFilter _buildPreviewFilter() {
     if (!_controller.contrastEnhancementEnabled) {
@@ -241,6 +244,18 @@ class _ScanViewState extends State<ScanView> with SingleTickerProviderStateMixin
                   children: [
                     Row(
                        children: [
+                         if (widget.onBack != null) ...[
+                           IconButton(
+                             onPressed: widget.onBack,
+                             icon: const Icon(
+                               Icons.arrow_back_ios_new_rounded,
+                               color: Colors.white,
+                               size: 20,
+                             ),
+                             tooltip: 'Kembali',
+                           ),
+                           const SizedBox(width: 4),
+                         ],
                          Expanded(
                            child: Row(
                              children: [
@@ -254,13 +269,35 @@ class _ScanViewState extends State<ScanView> with SingleTickerProviderStateMixin
                                const SizedBox(width: 8),
                                Switch(
                                  value: _controller.contrastEnhancementEnabled,
-                                 onChanged:
-                                     _controller.setContrastEnhancementEnabled,
+                                 onChanged: (val) {
+                                   _controller.setContrastEnhancementEnabled(val);
+                                   setState(() {
+                                     _showSliders = val;
+                                   });
+                                 },
                                  activeThumbColor: const Color(0xFFE93E9D),
                                ),
                              ],
                            ),
                          ),
+                         if (_controller.contrastEnhancementEnabled) ...[
+                           IconButton(
+                             onPressed: () {
+                               setState(() {
+                                 _showSliders = !_showSliders;
+                               });
+                             },
+                             icon: Icon(
+                               _showSliders
+                                   ? Icons.expand_less_rounded
+                                   : Icons.tune_rounded,
+                               color: _showSliders
+                                   ? const Color(0xFFE93E9D)
+                                   : Colors.white,
+                             ),
+                             tooltip: 'Atur Kontras & Brightness',
+                           ),
+                         ],
                          IconButton(
                            onPressed: _controller.toggleFlashlight,
                            icon: Icon(
@@ -275,46 +312,40 @@ class _ScanViewState extends State<ScanView> with SingleTickerProviderStateMixin
                          ),
                        ],
                      ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Level Kontras: ${_controller.contrastLevel.toStringAsFixed(2)}x',
-                      style: TextStyle(
-                        color: _controller.contrastEnhancementEnabled
-                            ? Colors.white
-                            : Colors.white70,
-                        fontSize: 12,
+                    if (_controller.contrastEnhancementEnabled && _showSliders) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Level Kontras: ${_controller.contrastLevel.toStringAsFixed(2)}x',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
                       ),
-                    ),
-                    Slider(
-                      min: 0.8,
-                      max: 1.6,
-                      divisions: 8,
-                      value: _controller.contrastLevel,
-                      activeColor: const Color(0xFFE93E9D),
-                      onChanged: _controller.contrastEnhancementEnabled
-                          ? _controller.setContrastLevel
-                          : null,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Level Brightness: ${_controller.brightnessLevel.toStringAsFixed(0)}',
-                      style: TextStyle(
-                        color: _controller.contrastEnhancementEnabled
-                            ? Colors.white
-                            : Colors.white70,
-                        fontSize: 12,
+                      Slider(
+                        min: 0.8,
+                        max: 1.6,
+                        divisions: 8,
+                        value: _controller.contrastLevel,
+                        activeColor: const Color(0xFFE93E9D),
+                        onChanged: _controller.setContrastLevel,
                       ),
-                    ),
-                    Slider(
-                      min: -30.0,
-                      max: 30.0,
-                      divisions: 12,
-                      value: _controller.brightnessLevel,
-                      activeColor: const Color(0xFFE93E9D),
-                      onChanged: _controller.contrastEnhancementEnabled
-                          ? _controller.setBrightnessLevel
-                          : null,
-                    ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Level Brightness: ${_controller.brightnessLevel.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                      Slider(
+                        min: -30.0,
+                        max: 30.0,
+                        divisions: 12,
+                        value: _controller.brightnessLevel,
+                        activeColor: const Color(0xFFE93E9D),
+                        onChanged: _controller.setBrightnessLevel,
+                      ),
+                    ],
                   ],
                 ),
               ),

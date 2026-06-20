@@ -112,34 +112,12 @@ class _LoginViewState extends State<LoginView> {
                 Center(
                   child: Column(
                     children: [
-                      // Fruit Silhouette Icon
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: const Color(0xFFE93E9D),
-                            width: 4.5,
-                          ),
-                        ),
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Positioned(
-                              top: -12,
-                              right: -6,
-                              child: Transform.rotate(
-                                angle: 0.5,
-                                child: const Icon(
-                                  Icons.eco,
-                                  size: 24,
-                                  color: Color(0xFFE93E9D),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                      // Brand Logo Icon
+                      Image.asset(
+                        'assets/images/LogoFruiTell.png',
+                        width: 88,
+                        height: 88,
+                        fit: BoxFit.contain,
                       ),
                       const SizedBox(height: 16),
                       const Text(
